@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-03-19T08:09:21.623Z",
+  "toolsSeen": [
+    "convert_framework",
+    "create_styles",
+    "generate_frontend_component",
+    "generate_html_structure",
+    "generate_storybook_story",
+    "refactor_component",
+    "review_ui_design"
+  ],
+  "stderr": [
+    "{\"level\":\"info\",\"message\":\"Gemini MCP Server ready\",\"ts\":1773907762033,\"execPath\":\"D:\\\\nodejs\\\\node_global\\\\gemini.cmd\",\"proxySource\":\"env\"}",
+    "{\"level\":\"warn\",\"message\":\"Gemini auth preflight skipped due to inconclusive probe\",\"ts\":1773907792062,\"execPath\":\"D:\\\\nodejs\\\\node_global\\\\gemini.cmd\",\"kind\":\"timeout\",\"error\":\"Gemini CLI timed out after 30000ms. Consider retrying with a longer timeout.\"}",
+    "{\"level\":\"warn\",\"message\":\"Gemini auth preflight skipped due to inconclusive probe\",\"ts\":1773907852073,\"execPath\":\"D:\\\\nodejs\\\\node_global\\\\gemini.cmd\",\"kind\":\"timeout\",\"error\":\"Gemini CLI timed out after 30000ms. Consider retrying with a longer timeout.\"}",
+    "{\"level\":\"warn\",\"message\":\"Gemini auth preflight skipped due to inconclusive probe\",\"ts\":1773907912073,\"execPath\":\"D:\\\\nodejs\\\\node_global\\\\gemini.cmd\",\"kind\":\"timeout\",\"error\":\"Gemini CLI timed out after 30000ms. Consider retrying with a longer timeout.\"}",
+    "{\"level\":\"warn\",\"message\":\"Gemini auth preflight skipped due to inconclusive probe\",\"ts\":1773907972090,\"execPath\":\"D:\\\\nodejs\\\\node_global\\\\gemini.cmd\",\"kind\":\"timeout\",\"error\":\"Gemini CLI timed out after 30000ms. Consider retrying with a longer timeout.\"}",
+    "{\"level\":\"warn\",\"message\":\"Gemini auth preflight skipped due to inconclusive probe\",\"ts\":1773908032117,\"execPath\":\"D:\\\\nodejs\\\\node_global\\\\gemini.cmd\",\"kind\":\"timeout\",\"error\":\"Gemini CLI timed out after 30000ms. Consider retrying with a longer timeout.\"}",
+    "{\"level\":\"warn\",\"message\":\"Gemini auth preflight skipped due to inconclusive probe\",\"ts\":1773908092118,\"execPath\":\"D:\\\\nodejs\\\\node_global\\\\gemini.cmd\",\"kind\":\"timeout\",\"error\":\"Gemini CLI timed out after 30000ms. Consider retrying with a longer timeout.\"}",
+    "{\"level\":\"warn\",\"message\":\"Gemini auth preflight skipped due to inconclusive probe\",\"ts\":1773908152126,\"execPath\":\"D:\\\\nodejs\\\\node_global\\\\gemini.cmd\",\"kind\":\"timeout\",\"error\":\"Gemini CLI timed out after 30000ms. Consider retrying with a longer timeout.\"}",
+    "{\"level\":\"warn\",\"message\":\"Gemini auth preflight skipped due to inconclusive probe\",\"ts\":1773908209099,\"execPath\":\"D:\\\\nodejs\\\\node_global\\\\gemini.cmd\",\"kind\":\"timeout\",\"error\":\"Gemini CLI timed out after 30000ms. Consider retrying with a longer timeout.\"}"
+  ],
+  "tests": [
+    {
+      "name": "tool:generate_frontend_component",
+      "status": "failed",
+      "durationMs": 60010,
+      "error": "MCP error -32001: Request timed out"
+    },
+    {
+      "name": "tool:create_styles",
+      "status": "failed",
+      "durationMs": 60013,
+      "error": "MCP error -32001: Request timed out"
+    },
+    {
+      "name": "tool:review_ui_design",
+      "status": "failed",
+      "durationMs": 60010,
+      "error": "MCP error -32001: Request timed out"
+    },
+    {
+      "name": "tool:generate_html_structure",
+      "status": "failed",
+      "durationMs": 60015,
+      "error": "MCP error -32001: Request timed out"
+    },
+    {
+      "name": "tool:refactor_component",
+      "status": "failed",
+      "durationMs": 60015,
+      "error": "MCP error -32001: Request timed out"
+    },
+    {
+      "name": "tool:generate_storybook_story",
+      "status": "failed",
+      "durationMs": 60006,
+      "error": "MCP error -32001: Request timed out"
+    },
+    {
+      "name": "tool:convert_framework",
+      "status": "passed",
+      "durationMs": 56969,
+      "details": {
+        "sessionId": "a7887c47-68ef-404d-aced-b27a35ad4e52",
+        "sessionReused": false,
+        "preview": "```vue\n<script setup lang=\"ts\">\ndefineProps<{\n  label: string;\n}>();\n</script>\n\n<template>\n  <span>{{ label }}</span>\n</template>\n```"
+      }
+    },
+    {
+      "name": "session reuse via MCP",
+      "status": "failed",
+      "durationMs": 60014,
+      "error": "MCP error -32001: Request timed out"
+    }
+  ]
+}
