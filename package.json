@@ -4,11 +4,17 @@
   "description": "Gemini CLI MCP Server - 将 Gemini CLI 封装为 MCP 工具，供 Codex 调用处理前端任务",
   "type": "module",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test",
+    "check:doc-sync": "npm run build && node scripts/check-doc-sync.mjs",
+    "sync:readme-tools": "npm run build && node scripts/sync-readme-tools.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",

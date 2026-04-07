@@ -141,3 +141,9 @@ vite.config.ts.timestamp-*
 .claude
 
 .idea
+.ace-tool/
+
+# gemini runtime state
+.gemini-mcp/
+test-tmp/
+

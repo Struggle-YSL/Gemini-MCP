@@ -1,0 +1,7 @@
+node_modules
+dist
+docs
+.gemini-mcp
+.claude
+.ace-tool
+test-tmp
