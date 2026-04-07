@@ -3,14 +3,23 @@ import type { Task } from "@modelcontextprotocol/sdk/types.js";
 import type { DatabaseSync, TaskRow } from "./sqlite-persistence-types.js";
 
 export function cleanupExpiredTasks(db: DatabaseSync, now = Date.now()): void {
-  db.prepare("DELETE FROM tasks WHERE expires_at IS NOT NULL AND expires_at <= ?").run(now);
+  db.prepare(
+    "DELETE FROM tasks WHERE expires_at IS NOT NULL AND expires_at <= ?",
+  ).run(now);
 }
 
-export function selectTaskRow(db: DatabaseSync, taskId: string): TaskRow | undefined {
-  return db.prepare(`
+export function selectTaskRow(
+  db: DatabaseSync,
+  taskId: string,
+): TaskRow | undefined {
+  return db
+    .prepare(
+      `
     SELECT task_id, status, ttl, expires_at, created_at, last_updated_at, poll_interval, status_message, result_json
     FROM tasks WHERE task_id = ?
-  `).get(taskId) as TaskRow | undefined;
+  `,
+    )
+    .get(taskId) as TaskRow | undefined;
 }
 
 export function requireTaskRow(db: DatabaseSync, taskId: string): TaskRow {
@@ -24,7 +33,9 @@ export function requireTaskRow(db: DatabaseSync, taskId: string): TaskRow {
 
 export function ensureTaskCanStoreResult(taskId: string, row: TaskRow): void {
   if (isTerminal(row.status)) {
-    throw new Error(`Cannot store result for task ${taskId} in terminal status '${row.status}'. Task results can only be stored once.`);
+    throw new Error(
+      `Cannot store result for task ${taskId} in terminal status '${row.status}'. Task results can only be stored once.`,
+    );
   }
 }
 
@@ -34,11 +45,16 @@ export function ensureTaskCanTransition(
   nextStatus: Task["status"],
 ): void {
   if (isTerminal(row.status)) {
-    throw new Error(`Cannot update task ${taskId} from terminal status '${row.status}' to '${nextStatus}'. Terminal states cannot transition.`);
+    throw new Error(
+      `Cannot update task ${taskId} from terminal status '${row.status}' to '${nextStatus}'. Terminal states cannot transition.`,
+    );
   }
 }
 
-export function getResultExpiresAt(row: TaskRow, nowMs = Date.now()): number | null {
+export function getResultExpiresAt(
+  row: TaskRow,
+  nowMs = Date.now(),
+): number | null {
   return row.ttl ? nowMs + row.ttl : row.expires_at;
 }
 

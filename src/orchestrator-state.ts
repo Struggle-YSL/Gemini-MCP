@@ -9,7 +9,12 @@ export const workItemTypeSchema = z.enum([
 ]);
 
 export const workItemOwnerSchema = z.enum(["codex", "gemini"]);
-export const workItemStatusSchema = z.enum(["queued", "working", "completed", "failed"]);
+export const workItemStatusSchema = z.enum([
+  "queued",
+  "working",
+  "completed",
+  "failed",
+]);
 
 export const workItemSchema = z.object({
   id: z.string(),
@@ -88,10 +93,14 @@ export interface ExecutionGraphValidationReport {
 }
 
 function expectedOwner(type: WorkItemType): WorkItemOwner {
-  return type === "frontend-plan" || type === "frontend-code" ? "gemini" : "codex";
+  return type === "frontend-plan" || type === "frontend-code"
+    ? "gemini"
+    : "codex";
 }
 
-function validateOwnerConsistency(graph: ExecutionGraph): ExecutionGraphIssue[] {
+function validateOwnerConsistency(
+  graph: ExecutionGraph,
+): ExecutionGraphIssue[] {
   const issues: ExecutionGraphIssue[] = [];
 
   for (const workItem of graph.work_items) {
@@ -196,7 +205,7 @@ function topologicalValidate(graph: ExecutionGraph): {
 
 export function createWorkItem(
   input: Omit<WorkItem, "deps" | "status" | "input" | "acceptance"> &
-    Partial<Pick<WorkItem, "deps" | "status" | "input" | "acceptance">>
+    Partial<Pick<WorkItem, "deps" | "status" | "input" | "acceptance">>,
 ): WorkItem {
   return workItemSchema.parse({
     ...input,
@@ -207,7 +216,9 @@ export function createWorkItem(
   });
 }
 
-export function validateExecutionGraph(raw: unknown): ExecutionGraphValidationReport {
+export function validateExecutionGraph(
+  raw: unknown,
+): ExecutionGraphValidationReport {
   const graph = executionGraphSchema.parse(raw);
   const ownerIssues = validateOwnerConsistency(graph);
   const topology = topologicalValidate(graph);
@@ -225,18 +236,22 @@ export function getReadyWorkItems(graph: ExecutionGraph): WorkItem[] {
   const completedWorkItemIds = new Set(
     graph.work_items
       .filter((workItem) => workItem.status === "completed")
-      .map((workItem) => workItem.id)
+      .map((workItem) => workItem.id),
   );
 
   return graph.work_items.filter((workItem) => {
     return (
       workItem.status === "queued" &&
-      workItem.deps.every((dependencyId) => completedWorkItemIds.has(dependencyId))
+      workItem.deps.every((dependencyId) =>
+        completedWorkItemIds.has(dependencyId),
+      )
     );
   });
 }
 
-export function createOrchestratorState(graph?: ExecutionGraph): OrchestratorState {
+export function createOrchestratorState(
+  graph?: ExecutionGraph,
+): OrchestratorState {
   return orchestratorStateSchema.parse({
     schema_version: ORCHESTRATOR_SCHEMA_VERSION,
     work_items: graph?.work_items ?? [],
@@ -249,14 +264,25 @@ export function createOrchestratorState(graph?: ExecutionGraph): OrchestratorSta
 function cloneState(state: OrchestratorState): OrchestratorState {
   return {
     schema_version: state.schema_version,
-    work_items: state.work_items.map((workItem) => ({ ...workItem, deps: [...workItem.deps], acceptance: [...workItem.acceptance], input: { ...workItem.input } })),
+    work_items: state.work_items.map((workItem) => ({
+      ...workItem,
+      deps: [...workItem.deps],
+      acceptance: [...workItem.acceptance],
+      input: { ...workItem.input },
+    })),
     task_bindings: state.task_bindings.map((binding) => ({ ...binding })),
-    frontend_threads: state.frontend_threads.map((binding) => ({ ...binding, work_item_ids: [...binding.work_item_ids] })),
+    frontend_threads: state.frontend_threads.map((binding) => ({
+      ...binding,
+      work_item_ids: [...binding.work_item_ids],
+    })),
     work_item_results: state.work_item_results.map((result) => ({ ...result })),
   };
 }
 
-function requireWorkItem(state: OrchestratorState, workItemId: string): WorkItem {
+function requireWorkItem(
+  state: OrchestratorState,
+  workItemId: string,
+): WorkItem {
   const workItem = state.work_items.find((item) => item.id === workItemId);
   if (!workItem) {
     throw new Error(`Unknown work item '${workItemId}'.`);
@@ -265,7 +291,10 @@ function requireWorkItem(state: OrchestratorState, workItemId: string): WorkItem
   return workItem;
 }
 
-function canTransitionStatus(currentStatus: WorkItemStatus, nextStatus: WorkItemStatus): boolean {
+function canTransitionStatus(
+  currentStatus: WorkItemStatus,
+  nextStatus: WorkItemStatus,
+): boolean {
   if (currentStatus === nextStatus) {
     return true;
   }
@@ -283,14 +312,14 @@ function canTransitionStatus(currentStatus: WorkItemStatus, nextStatus: WorkItem
 export function transitionWorkItemStatus(
   state: OrchestratorState,
   workItemId: string,
-  nextStatus: WorkItemStatus
+  nextStatus: WorkItemStatus,
 ): OrchestratorState {
   const nextState = cloneState(state);
   const workItem = requireWorkItem(nextState, workItemId);
 
   if (!canTransitionStatus(workItem.status, nextStatus)) {
     throw new Error(
-      `Invalid work item status transition for '${workItemId}': '${workItem.status}' -> '${nextStatus}'.`
+      `Invalid work item status transition for '${workItemId}': '${workItem.status}' -> '${nextStatus}'.`,
     );
   }
 
@@ -302,7 +331,7 @@ export function transitionWorkItemStatus(
 
     if (unmetDependency) {
       throw new Error(
-        `Cannot start work item '${workItemId}' before dependency '${unmetDependency}' completes.`
+        `Cannot start work item '${workItemId}' before dependency '${unmetDependency}' completes.`,
       );
     }
   }
@@ -314,7 +343,7 @@ export function transitionWorkItemStatus(
 export function bindTaskToWorkItem(
   state: OrchestratorState,
   input: Omit<TaskWorkItemBinding, "created_at" | "updated_at"> &
-    Partial<Pick<TaskWorkItemBinding, "created_at" | "updated_at">>
+    Partial<Pick<TaskWorkItemBinding, "created_at" | "updated_at">>,
 ): OrchestratorState {
   const nextState = cloneState(state);
   const workItem = requireWorkItem(nextState, input.work_item_id);
@@ -322,23 +351,31 @@ export function bindTaskToWorkItem(
 
   if (workItem.type !== "frontend-plan" && workItem.type !== "frontend-code") {
     throw new Error(
-      `Task bindings are only valid for frontend work items. '${input.work_item_id}' is '${workItem.type}'.`
+      `Task bindings are only valid for frontend work items. '${input.work_item_id}' is '${workItem.type}'.`,
     );
   }
 
-  const existingTaskBinding = nextState.task_bindings.find((binding) => binding.task_id === input.task_id);
-  if (existingTaskBinding && existingTaskBinding.work_item_id !== input.work_item_id) {
+  const existingTaskBinding = nextState.task_bindings.find(
+    (binding) => binding.task_id === input.task_id,
+  );
+  if (
+    existingTaskBinding &&
+    existingTaskBinding.work_item_id !== input.work_item_id
+  ) {
     throw new Error(
-      `Task '${input.task_id}' is already bound to work item '${existingTaskBinding.work_item_id}'.`
+      `Task '${input.task_id}' is already bound to work item '${existingTaskBinding.work_item_id}'.`,
     );
   }
 
   const duplicateWorkItemBinding = nextState.task_bindings.find((binding) => {
-    return binding.work_item_id === input.work_item_id && binding.task_id !== input.task_id;
+    return (
+      binding.work_item_id === input.work_item_id &&
+      binding.task_id !== input.task_id
+    );
   });
   if (duplicateWorkItemBinding) {
     throw new Error(
-      `Work item '${input.work_item_id}' is already bound to task '${duplicateWorkItemBinding.task_id}'.`
+      `Work item '${input.work_item_id}' is already bound to task '${duplicateWorkItemBinding.task_id}'.`,
     );
   }
 
@@ -348,7 +385,9 @@ export function bindTaskToWorkItem(
     updated_at: input.updated_at ?? now,
   });
 
-  const index = nextState.task_bindings.findIndex((item) => item.task_id === binding.task_id);
+  const index = nextState.task_bindings.findIndex(
+    (item) => item.task_id === binding.task_id,
+  );
   if (index >= 0) {
     nextState.task_bindings[index] = binding;
   } else {
@@ -361,7 +400,7 @@ export function bindTaskToWorkItem(
 export function bindFrontendThread(
   state: OrchestratorState,
   input: Omit<FrontendThreadBinding, "updated_at" | "work_item_ids"> &
-    Partial<Pick<FrontendThreadBinding, "updated_at" | "work_item_ids">>
+    Partial<Pick<FrontendThreadBinding, "updated_at" | "work_item_ids">>,
 ): OrchestratorState {
   const nextState = cloneState(state);
   const now = new Date().toISOString();
@@ -371,7 +410,7 @@ export function bindFrontendThread(
     const workItem = requireWorkItem(nextState, workItemId);
     if (workItem.owner !== "gemini") {
       throw new Error(
-        `Frontend thread bindings can only include Gemini-owned work items. '${workItemId}' is owned by '${workItem.owner}'.`
+        `Frontend thread bindings can only include Gemini-owned work items. '${workItemId}' is owned by '${workItem.owner}'.`,
       );
     }
   }
@@ -382,12 +421,16 @@ export function bindFrontendThread(
     updated_at: input.updated_at ?? now,
   });
 
-  const index = nextState.frontend_threads.findIndex((item) => item.session_id === binding.session_id);
+  const index = nextState.frontend_threads.findIndex(
+    (item) => item.session_id === binding.session_id,
+  );
   if (index >= 0) {
-    const mergedWorkItemIds = [...new Set([
-      ...nextState.frontend_threads[index].work_item_ids,
-      ...binding.work_item_ids,
-    ])];
+    const mergedWorkItemIds = [
+      ...new Set([
+        ...nextState.frontend_threads[index].work_item_ids,
+        ...binding.work_item_ids,
+      ]),
+    ];
     nextState.frontend_threads[index] = {
       ...binding,
       work_item_ids: mergedWorkItemIds,
@@ -414,7 +457,9 @@ export function setWorkItemResult(
     updated_at: updatedAt,
   });
 
-  const index = nextState.work_item_results.findIndex((item) => item.work_item_id === workItemId);
+  const index = nextState.work_item_results.findIndex(
+    (item) => item.work_item_id === workItemId,
+  );
   if (index >= 0) {
     nextState.work_item_results[index] = result;
   } else {
@@ -428,12 +473,16 @@ export function getBoundTaskForWorkItem(
   state: OrchestratorState,
   workItemId: string,
 ): TaskWorkItemBinding | undefined {
-  return state.task_bindings.find((binding) => binding.work_item_id === workItemId);
+  return state.task_bindings.find(
+    (binding) => binding.work_item_id === workItemId,
+  );
 }
 
 export function getFrontendThreadForSession(
   state: OrchestratorState,
   sessionId: string,
 ): FrontendThreadBinding | undefined {
-  return state.frontend_threads.find((binding) => binding.session_id === sessionId);
+  return state.frontend_threads.find(
+    (binding) => binding.session_id === sessionId,
+  );
 }

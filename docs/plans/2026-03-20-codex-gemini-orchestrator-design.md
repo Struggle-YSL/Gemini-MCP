@@ -10,7 +10,7 @@
 - SQLite task/message/session/orchestrator 持久化、后台恢复 runtime、自动重试、manual-review 升级
 - Gemini 子进程跨平台“两阶段终止 + 强制回收”语义
 
-当前下一阶段重点已经切换到 `v3.0` Windows 认证自动化和 `v3.1` Linux/macOS 端到端验证。本文件保留为架构基线说明。
+当前下一阶段重点已经切换到 `v3.0` npm 安装分发（Windows 优先）和 `v3.1` Linux/macOS 端到端验证。本文件保留为架构基线说明。
 ## 1. 目标
 
 基于当前 `gemini-mcp` 服务，建立一套由 Codex 作为主 agent 统一统筹的协同方案，实现以下能力：

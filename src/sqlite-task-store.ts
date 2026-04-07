@@ -1,5 +1,13 @@
-import type { Request, RequestId, Result, Task } from "@modelcontextprotocol/sdk/types.js";
-import type { CreateTaskOptions, TaskStore } from "@modelcontextprotocol/sdk/experimental/tasks/interfaces.js";
+import type {
+  Request,
+  RequestId,
+  Result,
+  Task,
+} from "@modelcontextprotocol/sdk/types.js";
+import type {
+  CreateTaskOptions,
+  TaskStore,
+} from "@modelcontextprotocol/sdk/experimental/tasks/interfaces.js";
 import { createTaskId, taskRowToTask } from "./sqlite-persistence-db.js";
 import type { DatabaseSync, TaskRow } from "./sqlite-persistence-types.js";
 import {
@@ -36,22 +44,26 @@ export class SQLiteTaskStore implements TaskStore {
       pollInterval: taskParams.pollInterval ?? 1000,
     };
 
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT INTO tasks (
         task_id, status, ttl, expires_at, created_at, last_updated_at,
         poll_interval, status_message, request_id_json, request_json, result_json
       ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL)
-    `).run(
-      task.taskId,
-      task.status,
-      task.ttl,
-      expiresAt,
-      task.createdAt,
-      task.lastUpdatedAt,
-      task.pollInterval ?? null,
-      JSON.stringify(requestId),
-      JSON.stringify(request),
-    );
+    `,
+      )
+      .run(
+        task.taskId,
+        task.status,
+        task.ttl,
+        expiresAt,
+        task.createdAt,
+        task.lastUpdatedAt,
+        task.pollInterval ?? null,
+        JSON.stringify(requestId),
+        JSON.stringify(request),
+      );
 
     return task;
   }
@@ -75,16 +87,22 @@ export class SQLiteTaskStore implements TaskStore {
     const lastUpdatedAt = new Date().toISOString();
     const expiresAt = getResultExpiresAt(row);
 
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       UPDATE tasks
       SET status = ?, last_updated_at = ?, expires_at = ?, result_json = ?
       WHERE task_id = ?
-    `).run(status, lastUpdatedAt, expiresAt, JSON.stringify(result), taskId);
+    `,
+      )
+      .run(status, lastUpdatedAt, expiresAt, JSON.stringify(result), taskId);
   }
 
   async getTaskResult(taskId: string, _sessionId?: string): Promise<Result> {
     cleanupExpiredTasks(this.db);
-    const row = this.db.prepare("SELECT result_json FROM tasks WHERE task_id = ?").get(taskId) as { result_json: string | null } | undefined;
+    const row = this.db
+      .prepare("SELECT result_json FROM tasks WHERE task_id = ?")
+      .get(taskId) as { result_json: string | null } | undefined;
 
     if (!row) {
       throw new Error(`Task with ID ${taskId} not found`);
@@ -111,19 +129,30 @@ export class SQLiteTaskStore implements TaskStore {
     const expiresAt = getStatusExpiresAt(row, status);
     const nextStatusMessage = statusMessage ?? row.status_message;
 
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       UPDATE tasks
       SET status = ?, status_message = ?, last_updated_at = ?, expires_at = ?
       WHERE task_id = ?
-    `).run(status, nextStatusMessage, lastUpdatedAt, expiresAt, taskId);
+    `,
+      )
+      .run(status, nextStatusMessage, lastUpdatedAt, expiresAt, taskId);
   }
 
-  async listTasks(cursor?: string, _sessionId?: string): Promise<{ tasks: Task[]; nextCursor?: string }> {
+  async listTasks(
+    cursor?: string,
+    _sessionId?: string,
+  ): Promise<{ tasks: Task[]; nextCursor?: string }> {
     cleanupExpiredTasks(this.db);
-    const rows = this.db.prepare(`
+    const rows = this.db
+      .prepare(
+        `
       SELECT task_id, status, ttl, expires_at, created_at, last_updated_at, poll_interval, status_message, result_json
       FROM tasks ORDER BY created_at, task_id
-    `).all() as TaskRow[];
+    `,
+      )
+      .all() as TaskRow[];
     const pageSize = 10;
     let startIndex = 0;
 
@@ -136,7 +165,10 @@ export class SQLiteTaskStore implements TaskStore {
     }
 
     const page = rows.slice(startIndex, startIndex + pageSize);
-    const nextCursor = startIndex + pageSize < rows.length ? page[page.length - 1]?.task_id : undefined;
+    const nextCursor =
+      startIndex + pageSize < rows.length
+        ? page[page.length - 1]?.task_id
+        : undefined;
 
     return {
       tasks: page.map(taskRowToTask),

@@ -21,7 +21,8 @@ export function buildContextSection(ctx: ProjectContext): string {
   const lines: string[] = [];
 
   if (ctx.design_system) lines.push(`Design System: ${ctx.design_system}`);
-  if (ctx.existing_components) lines.push(`Existing Components: ${ctx.existing_components}`);
+  if (ctx.existing_components)
+    lines.push(`Existing Components: ${ctx.existing_components}`);
   if (ctx.color_tokens) lines.push(`Color Tokens: ${ctx.color_tokens}`);
   if (ctx.spacing_scale) lines.push(`Spacing Scale: ${ctx.spacing_scale}`);
   if (ctx.breakpoints) lines.push(`Breakpoints: ${ctx.breakpoints}`);
@@ -29,5 +30,7 @@ export function buildContextSection(ctx: ProjectContext): string {
 
   if (lines.length === 0) return "";
 
-  return ["--- Project Context ---", ...lines, "----------------------"].join("\n");
+  return ["--- Project Context ---", ...lines, "----------------------"].join(
+    "\n",
+  );
 }

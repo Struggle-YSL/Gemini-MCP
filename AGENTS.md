@@ -11,7 +11,7 @@
   - orchestrator graph / loop / summary / resolution / diagnostics
   - SQLite 持久化（不可用时自动回退内存）
 - 下一阶段重点：
-  - v3.0：Windows 认证自动化
+  - v3.0：npm 安装分发（Windows 优先）
   - v3.1：Linux / macOS 端到端验证与平台兜底
 
 ## 事实来源优先级
@@ -235,11 +235,3 @@
 - `docs/plans/2026-03-20-codex-gemini-orchestrator-implementation-plan.md`
 - `docs/plans/2026-03-20-codex-gemini-tool-schemas.md`
 - `docs/plans/upgrade-roadmap.md`
-
-
-
-
-
-
-
-

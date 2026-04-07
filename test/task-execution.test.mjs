@@ -24,7 +24,10 @@ async function waitFor(predicate, timeoutMs = 250) {
 test("formatTaskProgressStatus renders stage and detail for task status messages", () => {
   assert.equal(formatTaskProgressStatus("queued"), "queued");
   assert.equal(
-    formatTaskProgressStatus("generating", "Running Gemini for structured patch generation"),
+    formatTaskProgressStatus(
+      "generating",
+      "Running Gemini for structured patch generation",
+    ),
     "generating: Running Gemini for structured patch generation",
   );
 });
@@ -103,7 +106,12 @@ test("TaskExecutionScheduler starts multiple tasks when concurrency allows it", 
 
 test("Task execution failure diagnostics aggregate structured failure kinds", () => {
   const failureTaskId = `failure-${Date.now()}`;
-  registerTaskExecution(failureTaskId, "implement_frontend_task", "frontend-implementation", "running");
+  registerTaskExecution(
+    failureTaskId,
+    "implement_frontend_task",
+    "frontend-implementation",
+    "running",
+  );
   markTaskExecutionFailed(failureTaskId, {
     kind: "timeout",
     message: "timed out",

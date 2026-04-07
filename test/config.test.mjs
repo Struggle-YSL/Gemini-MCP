@@ -52,7 +52,12 @@ test("resolveRuntimeConfig clamps or defaults invalid numeric env values", () =>
 });
 
 test("resolveRuntimeConfig accepts supported GEMINI_MCP_LOG_LEVEL values", () => {
-  assert.equal(resolveRuntimeConfig({ GEMINI_MCP_LOG_LEVEL: "warn" }).logLevel, "warn");
-  assert.equal(resolveRuntimeConfig({ GEMINI_MCP_LOG_LEVEL: "ERROR" }).logLevel, "error");
+  assert.equal(
+    resolveRuntimeConfig({ GEMINI_MCP_LOG_LEVEL: "warn" }).logLevel,
+    "warn",
+  );
+  assert.equal(
+    resolveRuntimeConfig({ GEMINI_MCP_LOG_LEVEL: "ERROR" }).logLevel,
+    "error",
+  );
 });
-

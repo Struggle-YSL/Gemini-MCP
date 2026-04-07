@@ -15,7 +15,9 @@ export const taskFailureStructuredContentSchema = z.object({
 });
 
 export type StructuredError = z.infer<typeof structuredErrorSchema>;
-export type TaskFailureStructuredContent = z.infer<typeof taskFailureStructuredContentSchema>;
+export type TaskFailureStructuredContent = z.infer<
+  typeof taskFailureStructuredContentSchema
+>;
 
 function normalizeErrorMessage(message: string): string {
   const normalized = message.trim();
@@ -37,7 +39,9 @@ export function normalizeError(error: unknown): StructuredError {
   });
 }
 
-export function buildTaskFailureStructuredContent(error: unknown): TaskFailureStructuredContent {
+export function buildTaskFailureStructuredContent(
+  error: unknown,
+): TaskFailureStructuredContent {
   return taskFailureStructuredContentSchema.parse({
     status: "failed",
     progress_stage: "failed",
@@ -60,18 +64,22 @@ export function createTaskFailureResult(error: unknown): CallToolResult {
   };
 }
 
-function tryParseTaskFailure(value: unknown): TaskFailureStructuredContent | null {
+function tryParseTaskFailure(
+  value: unknown,
+): TaskFailureStructuredContent | null {
   const parsed = taskFailureStructuredContentSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
 }
 
-export function extractTaskFailureError(result: unknown): StructuredError | undefined {
+export function extractTaskFailureError(
+  result: unknown,
+): StructuredError | undefined {
   if (!result || typeof result !== "object") {
     return undefined;
   }
 
   const fromStructured = tryParseTaskFailure(
-    (result as { structuredContent?: unknown }).structuredContent
+    (result as { structuredContent?: unknown }).structuredContent,
   );
   if (fromStructured) {
     return fromStructured.error;
@@ -109,4 +117,3 @@ export function extractTaskFailureError(result: unknown): StructuredError | unde
 
   return undefined;
 }
-

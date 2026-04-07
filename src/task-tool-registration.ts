@@ -4,7 +4,11 @@ import type {
   ShapeOutput,
   ZodRawShapeCompat,
 } from "@modelcontextprotocol/sdk/server/zod-compat.js";
-import type { CallToolResult, Request, Task } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  CallToolResult,
+  Request,
+  Task,
+} from "@modelcontextprotocol/sdk/types.js";
 import type {
   CreateTaskRequestHandlerExtra,
   TaskRequestHandlerExtra,
@@ -12,7 +16,10 @@ import type {
   ToolTaskHandler,
 } from "@modelcontextprotocol/sdk/experimental/tasks/interfaces.js";
 import { randomUUID } from "node:crypto";
-import { executeTaskHandler, startTaskCancellationWatcher } from "./task-tool-lifecycle.js";
+import {
+  executeTaskHandler,
+  startTaskCancellationWatcher,
+} from "./task-tool-lifecycle.js";
 import { scheduleTaskExecution } from "./task-tool-scheduling.js";
 import type {
   OptionalTaskToolContext,
@@ -55,15 +62,16 @@ function createManagedTaskRunner<Args extends Record<string, unknown>>(
   controller: AbortController,
   stopWatchingCancellation: () => void,
 ): () => Promise<void> {
-  return () => executeTaskHandler(
-    name,
-    taskId,
-    args,
-    { taskStore },
-    handler,
-    controller,
-    stopWatchingCancellation,
-  );
+  return () =>
+    executeTaskHandler(
+      name,
+      taskId,
+      args,
+      { taskStore },
+      handler,
+      controller,
+      stopWatchingCancellation,
+    );
 }
 
 export async function submitManagedTask(
@@ -120,8 +128,13 @@ function registerTaskTool<
   options?: TaskToolRegistrationOptions<OutputArgs>,
 ): void {
   const taskHandlers = {
-    createTask: async (args: ShapeOutput<Args>, extra: CreateTaskRequestHandlerExtra) => {
-      const task = await extra.taskStore.createTask(createTaskCreationOptions());
+    createTask: async (
+      args: ShapeOutput<Args>,
+      extra: CreateTaskRequestHandlerExtra,
+    ) => {
+      const task = await extra.taskStore.createTask(
+        createTaskCreationOptions(),
+      );
       const controller = new AbortController();
       const stopWatchingCancellation = startTaskCancellationWatcher(
         extra.taskStore,
@@ -150,15 +163,23 @@ function registerTaskTool<
 
       return { task };
     },
-    getTask: async (_args: ShapeOutput<Args>, extra: TaskRequestHandlerExtra) => {
+    getTask: async (
+      _args: ShapeOutput<Args>,
+      extra: TaskRequestHandlerExtra,
+    ) => {
       const task = await extra.taskStore.getTask(extra.taskId);
       if (!task) {
         throw new Error(`Task ${extra.taskId} not found`);
       }
       return task;
     },
-    getTaskResult: async (_args: ShapeOutput<Args>, extra: TaskRequestHandlerExtra) => {
-      return await extra.taskStore.getTaskResult(extra.taskId) as CallToolResult;
+    getTaskResult: async (
+      _args: ShapeOutput<Args>,
+      extra: TaskRequestHandlerExtra,
+    ) => {
+      return (await extra.taskStore.getTaskResult(
+        extra.taskId,
+      )) as CallToolResult;
     },
   };
 

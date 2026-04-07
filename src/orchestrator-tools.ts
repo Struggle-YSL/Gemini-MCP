@@ -17,19 +17,20 @@ function hasNonEmptyValue(value: unknown): boolean {
 export const requiredProjectContextSchema = projectContextSchema
   .superRefine((value, ctx) => {
     const hasCoreContext =
-      hasNonEmptyValue(value.design_system)
-      || hasNonEmptyValue(value.existing_components)
-      || hasNonEmptyValue(value.conventions);
+      hasNonEmptyValue(value.design_system) ||
+      hasNonEmptyValue(value.existing_components) ||
+      hasNonEmptyValue(value.conventions);
 
     if (!hasCoreContext) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "project_context 至少需要提供 design_system / existing_components / conventions 之一的非空值。",
+        message:
+          "project_context 至少需要提供 design_system / existing_components / conventions 之一的非空值。",
       });
     }
   })
   .describe(
-    "项目上下文，编排类前端工具必填，且至少提供 design_system / existing_components / conventions 之一"
+    "项目上下文，编排类前端工具必填，且至少提供 design_system / existing_components / conventions 之一",
   );
 
 export function extractStructuredJson(raw: string): unknown {
@@ -53,14 +54,14 @@ export function extractStructuredJson(raw: string): unknown {
 export function parseStructuredResult<T>(
   toolName: string,
   raw: string,
-  schema: z.ZodType<T>
+  schema: z.ZodType<T>,
 ): T {
   const parsed = extractStructuredJson(raw);
   const result = schema.safeParse(parsed);
 
   if (!result.success) {
     throw new Error(
-      `${toolName} returned invalid structured JSON: ${result.error.message}`
+      `${toolName} returned invalid structured JSON: ${result.error.message}`,
     );
   }
 
@@ -68,10 +69,12 @@ export function parseStructuredResult<T>(
 }
 
 export function createStructuredToolResult<T extends Record<string, unknown>>(
-  payload: T
+  payload: T,
 ) {
   return {
-    content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
+    content: [
+      { type: "text" as const, text: JSON.stringify(payload, null, 2) },
+    ],
     structuredContent: payload,
   };
 }
@@ -88,7 +91,11 @@ function normalizeRelativePath(input: string): string {
   }
 
   const resolved = path.posix.normalize(normalized);
-  if (resolved === "." || resolved.startsWith("../") || resolved.includes("/../")) {
+  if (
+    resolved === "." ||
+    resolved.startsWith("../") ||
+    resolved.includes("/../")
+  ) {
     throw new Error(`Path escapes the workspace root: ${input}`);
   }
 
@@ -120,18 +127,20 @@ export function validateAllowedPaths(paths: string[]): string[] {
 
 export function assertPathsWithinAllowList(
   filePaths: string[],
-  allowedPaths: string[]
+  allowedPaths: string[],
 ): void {
   const normalizedAllowList = validateAllowedPaths(allowedPaths);
   const matchers = normalizedAllowList.map((item) => globToRegex(item));
 
   for (const filePath of filePaths) {
     const normalizedFilePath = normalizeRelativePath(filePath);
-    const matched = matchers.some((matcher) => matcher.test(normalizedFilePath));
+    const matched = matchers.some((matcher) =>
+      matcher.test(normalizedFilePath),
+    );
 
     if (!matched) {
       throw new Error(
-        `File path '${normalizedFilePath}' is outside allowed_paths: ${normalizedAllowList.join(", ")}`
+        `File path '${normalizedFilePath}' is outside allowed_paths: ${normalizedAllowList.join(", ")}`,
       );
     }
   }

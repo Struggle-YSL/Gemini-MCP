@@ -26,9 +26,12 @@ export function registerGetOrchestratorResolution(
     "读取主 agent 可消费的 orchestrator 决策包，包括 recommended actions、manual actions 和已完成结果摘要",
     getOrchestratorResolutionInputSchema.shape,
     async (args) => {
-      const result = getOrchestratorResolution(args as GetOrchestratorResolutionInput, {
-        orchestratorStore: options?.orchestratorStore,
-      });
+      const result = getOrchestratorResolution(
+        args as GetOrchestratorResolutionInput,
+        {
+          orchestratorStore: options?.orchestratorStore,
+        },
+      );
       return createStructuredToolResult(result);
     },
     {
@@ -50,10 +53,13 @@ export function registerApplyOrchestratorResolution(
     "应用 Codex 对 orchestrator run 的决策，支持 provide-result、retry-work-item 和 mark-failed，并按需重新激活后台 runtime",
     applyOrchestratorResolutionInputSchema.shape,
     async (args) => {
-      const result = applyOrchestratorResolution(args as ApplyOrchestratorResolutionInput, {
-        orchestratorStore: options?.orchestratorStore,
-        runtimeManager: options?.runtimeManager,
-      });
+      const result = applyOrchestratorResolution(
+        args as ApplyOrchestratorResolutionInput,
+        {
+          orchestratorStore: options?.orchestratorStore,
+          runtimeManager: options?.runtimeManager,
+        },
+      );
       return createStructuredToolResult(result);
     },
     {

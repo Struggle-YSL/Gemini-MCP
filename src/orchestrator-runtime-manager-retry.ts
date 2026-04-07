@@ -40,10 +40,16 @@ export function applyFailurePolicy(
   let requiresManualReview = false;
   let scheduledRetry = false;
 
-  for (const workItem of snapshot.state.work_items.filter((item) => item.status === "failed")) {
-    const binding = snapshot.state.task_bindings.find((item) => item.work_item_id === workItem.id);
+  for (const workItem of snapshot.state.work_items.filter(
+    (item) => item.status === "failed",
+  )) {
+    const binding = snapshot.state.task_bindings.find(
+      (item) => item.work_item_id === workItem.id,
+    );
     const failureError = findWorkItemFailureError(snapshot, workItem.id);
-    const failureDetail = failureError ? describeFailureError(failureError) : undefined;
+    const failureDetail = failureError
+      ? describeFailureError(failureError)
+      : undefined;
     const failureReason = binding
       ? failureDetail
         ? `Task '${binding.task_id}' failed for work item '${workItem.id}': ${failureDetail}`
@@ -52,15 +58,27 @@ export function applyFailurePolicy(
         ? `Work item '${workItem.id}' failed: ${failureDetail}`
         : `Work item '${workItem.id}' failed without an active task binding.`;
 
-    const existingRetry = retryStates.find((item) => item.work_item_id === workItem.id);
+    const existingRetry = retryStates.find(
+      (item) => item.work_item_id === workItem.id,
+    );
     const attempts = (existingRetry?.attempts ?? 0) + 1;
-    retryStates = updateRetryState(retryStates, workItem.id, attempts, updatedAt, failureReason);
+    retryStates = updateRetryState(
+      retryStates,
+      workItem.id,
+      attempts,
+      updatedAt,
+      failureReason,
+    );
 
-    const isRetryableGemini = workItem.owner === "gemini"
-      && (workItem.type === "frontend-plan" || workItem.type === "frontend-code");
+    const isRetryableGemini =
+      workItem.owner === "gemini" &&
+      (workItem.type === "frontend-plan" || workItem.type === "frontend-code");
 
     if (isRetryableGemini && attempts <= maxGeminiRetries) {
-      mutatedState = resetWorkItemForRetry({ ...nextSnapshot, state: mutatedState }, workItem.id).state;
+      mutatedState = resetWorkItemForRetry(
+        { ...nextSnapshot, state: mutatedState },
+        workItem.id,
+      ).state;
       scheduledRetry = true;
       nextSnapshot = {
         ...nextSnapshot,

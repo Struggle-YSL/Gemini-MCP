@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { extractTaskFailureError } from "./error-model.js";
-import type { ExecutionGraph, OrchestratorState, WorkItem } from "./orchestrator-state.js";
+import type {
+  ExecutionGraph,
+  OrchestratorState,
+  WorkItem,
+} from "./orchestrator-state.js";
 import type {
   OrchestratorRuntimeSummary,
   PersistedOrchestratorRuntimeState,
@@ -68,7 +72,13 @@ export const orchestratorFailureDiagnosticsSchema = z.object({
 });
 
 export const orchestratorFinalSummarySchema = z.object({
-  status: z.enum(["running", "completed", "failed", "manual-review-required", "invalid-graph"]),
+  status: z.enum([
+    "running",
+    "completed",
+    "failed",
+    "manual-review-required",
+    "invalid-graph",
+  ]),
   headline: z.string(),
   natural_language_summary: z.string(),
   completed_work_items: z.array(summaryWorkItemSchema),
@@ -80,10 +90,18 @@ export const orchestratorFinalSummarySchema = z.object({
 });
 
 export type OrchestratorEvent = z.infer<typeof orchestratorEventSchema>;
-export type OrchestratorRetryState = z.infer<typeof orchestratorRetryStateSchema>;
-export type OrchestratorManualAction = z.infer<typeof orchestratorManualActionSchema>;
-export type OrchestratorFailureDiagnostics = z.infer<typeof orchestratorFailureDiagnosticsSchema>;
-export type OrchestratorFinalSummary = z.infer<typeof orchestratorFinalSummarySchema>;
+export type OrchestratorRetryState = z.infer<
+  typeof orchestratorRetryStateSchema
+>;
+export type OrchestratorManualAction = z.infer<
+  typeof orchestratorManualActionSchema
+>;
+export type OrchestratorFailureDiagnostics = z.infer<
+  typeof orchestratorFailureDiagnosticsSchema
+>;
+export type OrchestratorFinalSummary = z.infer<
+  typeof orchestratorFinalSummarySchema
+>;
 
 export interface OrchestratorSummarySnapshotLike {
   orchestrator_id: string;
@@ -103,10 +121,7 @@ export interface CreateOrchestratorEventInput {
   data?: Record<string, unknown>;
 }
 
-function toSummaryWorkItem(
-  workItem: WorkItem,
-  retryAttempts: number,
-) {
+function toSummaryWorkItem(workItem: WorkItem, retryAttempts: number) {
   return {
     work_item_id: workItem.id,
     owner: workItem.owner,
@@ -117,10 +132,17 @@ function toSummaryWorkItem(
   };
 }
 
-function buildFailureDiagnostics(snapshot: OrchestratorSummarySnapshotLike): OrchestratorFailureDiagnostics {
-  const failedWorkItems = snapshot.state.work_items.filter((item) => item.status === "failed");
+function buildFailureDiagnostics(
+  snapshot: OrchestratorSummarySnapshotLike,
+): OrchestratorFailureDiagnostics {
+  const failedWorkItems = snapshot.state.work_items.filter(
+    (item) => item.status === "failed",
+  );
   const resultByWorkItemId = new Map(
-    snapshot.state.work_item_results.map((result) => [result.work_item_id, result])
+    snapshot.state.work_item_results.map((result) => [
+      result.work_item_id,
+      result,
+    ]),
   );
 
   let structuredFailures = 0;
@@ -130,7 +152,9 @@ function buildFailureDiagnostics(snapshot: OrchestratorSummarySnapshotLike): Orc
 
   for (const workItem of failedWorkItems) {
     const result = resultByWorkItemId.get(workItem.id);
-    const failureError = result ? extractTaskFailureError(result.payload) : undefined;
+    const failureError = result
+      ? extractTaskFailureError(result.payload)
+      : undefined;
 
     if (!failureError) {
       failureKinds.unknown = (failureKinds.unknown ?? 0) + 1;
@@ -139,7 +163,8 @@ function buildFailureDiagnostics(snapshot: OrchestratorSummarySnapshotLike): Orc
     }
 
     structuredFailures += 1;
-    failureKinds[failureError.kind] = (failureKinds[failureError.kind] ?? 0) + 1;
+    failureKinds[failureError.kind] =
+      (failureKinds[failureError.kind] ?? 0) + 1;
     if (failureError.retryable) {
       retryableFailures += 1;
     } else {
@@ -156,7 +181,9 @@ function buildFailureDiagnostics(snapshot: OrchestratorSummarySnapshotLike): Orc
   });
 }
 
-export function createOrchestratorEvent(input: CreateOrchestratorEventInput): OrchestratorEvent {
+export function createOrchestratorEvent(
+  input: CreateOrchestratorEventInput,
+): OrchestratorEvent {
   return orchestratorEventSchema.parse({
     event_id: randomUUID(),
     ts: input.ts ?? new Date().toISOString(),
@@ -180,46 +207,66 @@ export function buildOrchestratorFinalSummary(
   updatedAt: string = new Date().toISOString(),
 ): OrchestratorFinalSummary {
   const retryState = new Map(
-    (snapshot.runtime?.work_item_retry_state ?? []).map((item) => [item.work_item_id, item]),
+    (snapshot.runtime?.work_item_retry_state ?? []).map((item) => [
+      item.work_item_id,
+      item,
+    ]),
   );
   const manualActions = snapshot.runtime?.manual_actions ?? [];
   const completedWorkItems = snapshot.state.work_items
     .filter((item) => item.status === "completed")
-    .map((item) => toSummaryWorkItem(item, retryState.get(item.id)?.attempts ?? 0));
+    .map((item) =>
+      toSummaryWorkItem(item, retryState.get(item.id)?.attempts ?? 0),
+    );
   const failedWorkItems = snapshot.state.work_items
     .filter((item) => item.status === "failed")
-    .map((item) => toSummaryWorkItem(item, retryState.get(item.id)?.attempts ?? 0));
+    .map((item) =>
+      toSummaryWorkItem(item, retryState.get(item.id)?.attempts ?? 0),
+    );
   const timelines = snapshot.state.work_items.map((item) => ({
     work_item_id: item.id,
     owner: item.owner,
     type: item.type,
     scope: item.scope,
     status: item.status,
-    events: (snapshot.events ?? []).filter((event) => event.work_item_id === item.id),
+    events: (snapshot.events ?? []).filter(
+      (event) => event.work_item_id === item.id,
+    ),
   }));
 
   let status: OrchestratorFinalSummary["status"];
-  if (snapshot.summary.status === "invalid-graph" || snapshot.runtime?.status === "invalid-graph") {
+  if (
+    snapshot.summary.status === "invalid-graph" ||
+    snapshot.runtime?.status === "invalid-graph"
+  ) {
     status = "invalid-graph";
-  } else if (manualActions.length > 0 || snapshot.runtime?.status === "manual-review-required") {
+  } else if (
+    manualActions.length > 0 ||
+    snapshot.runtime?.status === "manual-review-required"
+  ) {
     status = "manual-review-required";
-  } else if (snapshot.state.work_items.every((item) => item.status === "completed")) {
+  } else if (
+    snapshot.state.work_items.every((item) => item.status === "completed")
+  ) {
     status = "completed";
-  } else if (snapshot.state.work_items.some((item) => item.status === "failed")) {
+  } else if (
+    snapshot.state.work_items.some((item) => item.status === "failed")
+  ) {
     status = "failed";
   } else {
     status = "running";
   }
 
-  const headline = status === "completed"
-    ? `Run ${snapshot.orchestrator_id} completed successfully.`
-    : status === "manual-review-required"
-      ? `Run ${snapshot.orchestrator_id} requires manual review.`
-      : status === "failed"
-        ? `Run ${snapshot.orchestrator_id} failed.`
-        : status === "invalid-graph"
-          ? `Run ${snapshot.orchestrator_id} is blocked by an invalid graph.`
-          : `Run ${snapshot.orchestrator_id} is still in progress.`;
+  const headline =
+    status === "completed"
+      ? `Run ${snapshot.orchestrator_id} completed successfully.`
+      : status === "manual-review-required"
+        ? `Run ${snapshot.orchestrator_id} requires manual review.`
+        : status === "failed"
+          ? `Run ${snapshot.orchestrator_id} failed.`
+          : status === "invalid-graph"
+            ? `Run ${snapshot.orchestrator_id} is blocked by an invalid graph.`
+            : `Run ${snapshot.orchestrator_id} is still in progress.`;
 
   const naturalLanguageSummary = [
     headline,

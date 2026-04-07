@@ -13,7 +13,10 @@ export interface OptionalTaskToolContext {
   taskId?: string;
   signal?: AbortSignal;
   throwIfAborted?: () => void;
-  reportProgressStage?: (stage: TaskProgressStage, detail?: string) => Promise<void>;
+  reportProgressStage?: (
+    stage: TaskProgressStage,
+    detail?: string,
+  ) => Promise<void>;
 }
 
 export interface TaskStatusReader {
@@ -21,8 +24,16 @@ export interface TaskStatusReader {
 }
 
 export interface TaskToolExecutionStore extends TaskStatusReader {
-  updateTaskStatus(taskId: string, status: Task["status"], statusMessage?: string): Promise<void>;
-  storeTaskResult(taskId: string, status: "completed" | "failed", result: CallToolResult): Promise<void>;
+  updateTaskStatus(
+    taskId: string,
+    status: Task["status"],
+    statusMessage?: string,
+  ): Promise<void>;
+  storeTaskResult(
+    taskId: string,
+    status: "completed" | "failed",
+    result: CallToolResult,
+  ): Promise<void>;
 }
 
 export interface TaskToolExecutionOptions {
@@ -31,7 +42,9 @@ export interface TaskToolExecutionOptions {
   concurrencyLimit?: number;
 }
 
-export interface TaskToolRegistrationOptions<OutputArgs extends ZodRawShapeCompat | AnySchema | undefined = undefined> {
+export interface TaskToolRegistrationOptions<
+  OutputArgs extends ZodRawShapeCompat | AnySchema | undefined = undefined,
+> {
   outputSchema?: OutputArgs;
   taskSupport?: "optional" | "required";
   execution?: TaskToolExecutionOptions;
@@ -39,6 +52,5 @@ export interface TaskToolRegistrationOptions<OutputArgs extends ZodRawShapeCompa
 
 export type TaskToolHandler<Args extends Record<string, unknown>> = (
   args: Args,
-  context?: OptionalTaskToolContext
+  context?: OptionalTaskToolContext,
 ) => Promise<CallToolResult>;
-

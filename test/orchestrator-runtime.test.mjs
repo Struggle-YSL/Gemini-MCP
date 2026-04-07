@@ -97,10 +97,19 @@ test("runOrchestratorGraph emits codex and gemini actions for ready queued work 
     },
   });
 
-  assert.deepEqual(result.next_actions.map((item) => item.kind), ["codex-work", "gemini-plan"]);
-  const planAction = result.next_actions.find((item) => item.kind === "gemini-plan");
+  assert.deepEqual(
+    result.next_actions.map((item) => item.kind),
+    ["codex-work", "gemini-plan"],
+  );
+  const planAction = result.next_actions.find(
+    (item) => item.kind === "gemini-plan",
+  );
   assert.equal(planAction?.tool_name, "plan_frontend_solution");
-  assert.deepEqual(planAction?.arguments.scope, ["drawer", "badge", "mobile layout"]);
+  assert.deepEqual(planAction?.arguments.scope, [
+    "drawer",
+    "badge",
+    "mobile layout",
+  ]);
   assert.deepEqual(result.blocked_work_items, [
     {
       work_item_id: "frontend-code-1",
@@ -157,9 +166,15 @@ test("runOrchestratorGraph completes work items from stored results and unlocks 
     },
   });
 
-  assert.equal(result.state.work_items.find((item) => item.id === "backend-1")?.status, "completed");
+  assert.equal(
+    result.state.work_items.find((item) => item.id === "backend-1")?.status,
+    "completed",
+  );
   assert.deepEqual(result.completed_work_items, ["backend-1"]);
-  assert.deepEqual(result.next_actions.map((item) => item.kind), ["gemini-code"]);
+  assert.deepEqual(
+    result.next_actions.map((item) => item.kind),
+    ["gemini-code"],
+  );
   assert.deepEqual(result.summary.ready_work_item_ids, ["frontend-code-1"]);
 });
 
@@ -212,12 +227,19 @@ test("runOrchestratorGraph waits for bound gemini task result and completes when
 
   assert.equal(completedResult.state.work_items[0].status, "completed");
   assert.equal(completedResult.completed_work_items[0], "frontend-code-1");
-  assert.equal(completedResult.state.frontend_threads[0]?.thread_id, "thread-1");
+  assert.equal(
+    completedResult.state.frontend_threads[0]?.thread_id,
+    "thread-1",
+  );
 });
 
 test("runOrchestratorGraph auto-loads bound task snapshots from taskStore when load_if_exists is enabled", async () => {
   const taskStore = new InMemoryTaskStore();
-  const task = await taskStore.createTask({ ttl: 60_000 }, "req-1", createToolCallRequest("req-1"));
+  const task = await taskStore.createTask(
+    { ttl: 60_000 },
+    "req-1",
+    createToolCallRequest("req-1"),
+  );
   const graph = {
     schema_version: "1.0",
     work_items: [
@@ -237,14 +259,17 @@ test("runOrchestratorGraph auto-loads bound task snapshots from taskStore when l
     session_id: "session-1",
   });
 
-  const waiting = await runOrchestratorGraph({
-    graph,
-    state: boundState,
-    project_context: projectContext,
-    load_if_exists: true,
-  }, {
-    taskStore,
-  });
+  const waiting = await runOrchestratorGraph(
+    {
+      graph,
+      state: boundState,
+      project_context: projectContext,
+      load_if_exists: true,
+    },
+    {
+      taskStore,
+    },
+  );
 
   assert.equal(waiting.next_actions.length, 0);
   assert.equal(waiting.blocked_work_items[0]?.category, "working");
@@ -266,19 +291,26 @@ test("runOrchestratorGraph auto-loads bound task snapshots from taskStore when l
     },
   });
 
-  const completed = await runOrchestratorGraph({
-    graph,
-    state: boundState,
-    project_context: projectContext,
-    load_if_exists: true,
-  }, {
-    taskStore,
-  });
+  const completed = await runOrchestratorGraph(
+    {
+      graph,
+      state: boundState,
+      project_context: projectContext,
+      load_if_exists: true,
+    },
+    {
+      taskStore,
+    },
+  );
 
   assert.equal(completed.state.work_items[0]?.status, "completed");
   assert.equal(completed.state.frontend_threads[0]?.session_id, "session-1");
   assert.equal(completed.state.frontend_threads[0]?.thread_id, "thread-1");
-  assert.equal(completed.state.work_item_results[0]?.payload?.structuredContent?.session_id, "session-1");
+  assert.equal(
+    completed.state.work_item_results[0]?.payload?.structuredContent
+      ?.session_id,
+    "session-1",
+  );
 });
 
 test("runOrchestratorGraph persists and reloads orchestrator snapshots when SQLite is available", async () => {
@@ -306,59 +338,73 @@ test("runOrchestratorGraph persists and reloads orchestrator snapshots when SQLi
     ],
   };
 
-  const first = await runOrchestratorGraph({
-    orchestrator_id: "orch-1",
-    persist: true,
-    graph,
-    project_context: projectContext,
-    work_item_inputs: {
-      "frontend-code-1": {
-        task_goal: "Build compare drawer",
-        allowed_paths: ["src/pages/**", "src/components/**"],
+  const first = await runOrchestratorGraph(
+    {
+      orchestrator_id: "orch-1",
+      persist: true,
+      graph,
+      project_context: projectContext,
+      work_item_inputs: {
+        "frontend-code-1": {
+          task_goal: "Build compare drawer",
+          allowed_paths: ["src/pages/**", "src/components/**"],
+        },
       },
     },
-  }, {
-    orchestratorStore: runtime?.orchestratorStore,
-    taskStore: runtime?.taskStore,
-  });
+    {
+      orchestratorStore: runtime?.orchestratorStore,
+      taskStore: runtime?.taskStore,
+    },
+  );
 
   assert.equal(first.persisted, true);
   assert.equal(first.loaded_from_store, false);
 
-  const stored = getOrchestratorState({
-    orchestrator_id: "orch-1",
-  }, {
-    orchestratorStore: runtime?.orchestratorStore,
-  });
+  const stored = getOrchestratorState(
+    {
+      orchestrator_id: "orch-1",
+    },
+    {
+      orchestratorStore: runtime?.orchestratorStore,
+    },
+  );
   assert.equal(stored.snapshot.orchestrator_id, "orch-1");
   assert.equal(stored.snapshot.summary.ready_work_item_ids[0], "backend-1");
 
   runtime?.orchestratorStore.saveOrchestratorSnapshot({
     orchestratorId: "orch-1",
     graph,
-    state: setWorkItemResult(createOrchestratorState(graph), "backend-1", { ok: true }),
+    state: setWorkItemResult(createOrchestratorState(graph), "backend-1", {
+      ok: true,
+    }),
     summary: first.summary,
   });
 
-  const second = await runOrchestratorGraph({
-    orchestrator_id: "orch-1",
-    persist: true,
-    load_if_exists: true,
-    graph,
-    project_context: projectContext,
-    work_item_inputs: {
-      "frontend-code-1": {
-        task_goal: "Build compare drawer",
-        allowed_paths: ["src/pages/**", "src/components/**"],
+  const second = await runOrchestratorGraph(
+    {
+      orchestrator_id: "orch-1",
+      persist: true,
+      load_if_exists: true,
+      graph,
+      project_context: projectContext,
+      work_item_inputs: {
+        "frontend-code-1": {
+          task_goal: "Build compare drawer",
+          allowed_paths: ["src/pages/**", "src/components/**"],
+        },
       },
     },
-  }, {
-    orchestratorStore: runtime?.orchestratorStore,
-    taskStore: runtime?.taskStore,
-  });
+    {
+      orchestratorStore: runtime?.orchestratorStore,
+      taskStore: runtime?.taskStore,
+    },
+  );
 
   assert.equal(second.loaded_from_store, true);
-  assert.equal(second.state.work_items.find((item) => item.id === "backend-1")?.status, "completed");
+  assert.equal(
+    second.state.work_items.find((item) => item.id === "backend-1")?.status,
+    "completed",
+  );
   assert.deepEqual(second.summary.ready_work_item_ids, ["frontend-code-1"]);
 });
 
@@ -381,5 +427,8 @@ test("runOrchestratorGraph reports persistence warning when SQLite store is unav
   });
 
   assert.equal(result.persisted, false);
-  assert.match(result.persistence_warning ?? "", /SQLite persistence unavailable/i);
+  assert.match(
+    result.persistence_warning ?? "",
+    /SQLite persistence unavailable/i,
+  );
 });

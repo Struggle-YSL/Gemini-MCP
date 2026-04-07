@@ -66,7 +66,7 @@ test("executeImplementFrontendTask builds structured completed result with progr
           sessionReused: true,
         };
       },
-    }
+    },
   );
 
   assert.equal(calls.length, 1);
@@ -74,7 +74,10 @@ test("executeImplementFrontendTask builds structured completed result with progr
   assert.match(calls[0].prompt, /Allowed paths: src\/components\/\*\*/);
   assert.equal(calls[0].options.sessionId, "session-001");
 
-  assert.deepEqual(stages.map((item) => item.stage), ["prompting", "generating", "packaging"]);
+  assert.deepEqual(
+    stages.map((item) => item.stage),
+    ["prompting", "generating", "packaging"],
+  );
   assert.equal(result.structuredContent.status, "completed");
   assert.equal(result.structuredContent.progress_stage, "completed");
   assert.equal(result.structuredContent.task_id, "task-001");
@@ -85,29 +88,25 @@ test("executeImplementFrontendTask builds structured completed result with progr
 
 test("executeImplementFrontendTask rejects files outside allowed paths", async () => {
   await assert.rejects(
-    executeImplementFrontendTask(
-      baseArgs,
-      undefined,
-      {
-        runGeminiToolFn: async () => ({
-          text: JSON.stringify({
-            files: [
-              {
-                path: "scripts/outside.ts",
-                action: "create",
-                content: "export {};",
-                reason: "bad path",
-              },
-            ],
-            validation_steps: [],
-            open_questions: [],
-            risks: [],
-          }),
-          sessionId: "session-any",
-          sessionReused: false,
+    executeImplementFrontendTask(baseArgs, undefined, {
+      runGeminiToolFn: async () => ({
+        text: JSON.stringify({
+          files: [
+            {
+              path: "scripts/outside.ts",
+              action: "create",
+              content: "export {};",
+              reason: "bad path",
+            },
+          ],
+          validation_steps: [],
+          open_questions: [],
+          risks: [],
         }),
-      }
-    ),
+        sessionId: "session-any",
+        sessionReused: false,
+      }),
+    }),
     /outside allowed_paths/i,
   );
 });

@@ -6,7 +6,10 @@ import {
   OptionalTaskToolContext,
   registerOptionalTaskTool,
 } from "../task-tool.js";
-import { createStructuredToolResult, parseStructuredResult } from "../orchestrator-tools.js";
+import {
+  createStructuredToolResult,
+  parseStructuredResult,
+} from "../orchestrator-tools.js";
 import {
   frontendPlanFragmentSchema,
   frontendPlanOutputSchema,
@@ -35,8 +38,12 @@ export async function executePlanFrontendSolution(
     `Goal: ${goal}`,
     `Scope: ${scope.join(", ")}`,
     constraints?.length ? `Constraints: ${constraints.join(" | ")}` : "",
-    backend_contracts?.length ? `Backend contracts: ${backend_contracts.join(" | ")}` : "",
-    acceptance_criteria?.length ? `Acceptance criteria: ${acceptance_criteria.join(" | ")}` : "",
+    backend_contracts?.length
+      ? `Backend contracts: ${backend_contracts.join(" | ")}`
+      : "",
+    acceptance_criteria?.length
+      ? `Acceptance criteria: ${acceptance_criteria.join(" | ")}`
+      : "",
     "Return exactly one JSON object with these keys:",
     '{"summary":"","ui_changes":[],"components":[],"api_dependencies":[],"risks":[],"tests":[],"assumptions":[]}',
     "Rules:",
@@ -53,7 +60,7 @@ export async function executePlanFrontendSolution(
   const fragment = parseStructuredResult(
     "plan_frontend_solution",
     result.text,
-    frontendPlanFragmentSchema
+    frontendPlanFragmentSchema,
   );
 
   return createStructuredToolResult({
@@ -71,10 +78,13 @@ export function registerPlanFrontendSolution(server: McpServer): void {
     "为 Codex 主 agent 生成结构化前端方案片段，不直接生成代码文件",
     planFrontendSolutionInputSchema.shape,
     async (args, context) => {
-      return await executePlanFrontendSolution(args as PlanFrontendSolutionInput, context);
+      return await executePlanFrontendSolution(
+        args as PlanFrontendSolutionInput,
+        context,
+      );
     },
     {
       outputSchema: frontendPlanOutputSchema.shape,
-    }
+    },
   );
 }

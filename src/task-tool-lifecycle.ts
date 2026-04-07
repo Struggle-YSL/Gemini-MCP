@@ -53,11 +53,17 @@ export function startTaskCancellationWatcher(
       try {
         const task = await taskStore.getTask(taskId);
         if (!task) {
-          log("warn", "Task disappeared while cancellation watcher was polling", {
-            taskId,
-            diagnostics: getTaskExecutionDiagnostics(),
-          });
-          controller.abort(new Error(`Task ${taskId} disappeared while running.`));
+          log(
+            "warn",
+            "Task disappeared while cancellation watcher was polling",
+            {
+              taskId,
+              diagnostics: getTaskExecutionDiagnostics(),
+            },
+          );
+          controller.abort(
+            new Error(`Task ${taskId} disappeared while running.`),
+          );
           return;
         }
 
@@ -75,7 +81,9 @@ export function startTaskCancellationWatcher(
           return;
         }
       } catch (error) {
-        controller.abort(error instanceof Error ? error : new Error(String(error)));
+        controller.abort(
+          error instanceof Error ? error : new Error(String(error)),
+        );
         return;
       }
     }
@@ -159,24 +167,42 @@ export async function executeTaskHandler<Args extends Record<string, unknown>>(
     const result = await handler(args, taskContext);
 
     if (!(await isTaskExecutionActive(extra.taskStore, taskId))) {
-      markTaskExecutionTerminal(taskId, controller.signal.aborted ? "cancelled" : "failed");
-      log("info", "Dropping task result because task became terminal before completion", {
-        toolName: name,
+      markTaskExecutionTerminal(
         taskId,
-        diagnostics: getTaskExecutionDiagnostics(),
-      });
+        controller.signal.aborted ? "cancelled" : "failed",
+      );
+      log(
+        "info",
+        "Dropping task result because task became terminal before completion",
+        {
+          toolName: name,
+          taskId,
+          diagnostics: getTaskExecutionDiagnostics(),
+        },
+      );
       return;
     }
 
-    await safelyReportStage(taskContext.reportProgressStage, "completed", "Task finished");
+    await safelyReportStage(
+      taskContext.reportProgressStage,
+      "completed",
+      "Task finished",
+    );
 
     if (!(await isTaskExecutionActive(extra.taskStore, taskId))) {
-      markTaskExecutionTerminal(taskId, controller.signal.aborted ? "cancelled" : "failed");
-      log("info", "Skipping task result store because task became terminal during completion", {
-        toolName: name,
+      markTaskExecutionTerminal(
         taskId,
-        diagnostics: getTaskExecutionDiagnostics(),
-      });
+        controller.signal.aborted ? "cancelled" : "failed",
+      );
+      log(
+        "info",
+        "Skipping task result store because task became terminal during completion",
+        {
+          toolName: name,
+          taskId,
+          diagnostics: getTaskExecutionDiagnostics(),
+        },
+      );
       return;
     }
 
@@ -192,26 +218,40 @@ export async function executeTaskHandler<Args extends Record<string, unknown>>(
     const message = normalizedError.message;
 
     if (!(await isTaskExecutionActive(extra.taskStore, taskId))) {
-      markTaskExecutionTerminal(taskId, controller.signal.aborted ? "cancelled" : "failed");
-      log("info", "Skipping task failure handling because task is already terminal", {
-        toolName: name,
+      markTaskExecutionTerminal(
         taskId,
-        error: message,
-        diagnostics: getTaskExecutionDiagnostics(),
-      });
+        controller.signal.aborted ? "cancelled" : "failed",
+      );
+      log(
+        "info",
+        "Skipping task failure handling because task is already terminal",
+        {
+          toolName: name,
+          taskId,
+          error: message,
+          diagnostics: getTaskExecutionDiagnostics(),
+        },
+      );
       return;
     }
 
     await safelyReportStage(taskContext.reportProgressStage, "failed", message);
 
     if (!(await isTaskExecutionActive(extra.taskStore, taskId))) {
-      markTaskExecutionTerminal(taskId, controller.signal.aborted ? "cancelled" : "failed");
-      log("info", "Skipping task failure result store because task became terminal", {
-        toolName: name,
+      markTaskExecutionTerminal(
         taskId,
-        error: message,
-        diagnostics: getTaskExecutionDiagnostics(),
-      });
+        controller.signal.aborted ? "cancelled" : "failed",
+      );
+      log(
+        "info",
+        "Skipping task failure result store because task became terminal",
+        {
+          toolName: name,
+          taskId,
+          error: message,
+          diagnostics: getTaskExecutionDiagnostics(),
+        },
+      );
       return;
     }
 
@@ -224,7 +264,11 @@ export async function executeTaskHandler<Args extends Record<string, unknown>>(
       retryable: normalizedError.retryable,
       diagnostics: getTaskExecutionDiagnostics(),
     });
-    await extra.taskStore.storeTaskResult(taskId, "failed", createTaskFailureResult(normalizedError));
+    await extra.taskStore.storeTaskResult(
+      taskId,
+      "failed",
+      createTaskFailureResult(normalizedError),
+    );
   } finally {
     stopWatchingCancellation();
   }

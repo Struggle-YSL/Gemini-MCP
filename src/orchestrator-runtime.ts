@@ -1,5 +1,4 @@
-import type { TaskStore } from "@modelcontextprotocol/sdk/experimental/tasks/interfaces.js";
-import { ORCHESTRATOR_SCHEMA_VERSION } from "./orchestrator-contracts.js";
+﻿import { ORCHESTRATOR_SCHEMA_VERSION } from "./orchestrator-contracts.js";
 import { buildOrchestratorFinalSummary } from "./orchestrator-summary.js";
 import type {
   OrchestratorSnapshot,
@@ -51,7 +50,6 @@ import {
   createGeminiPlanAction,
   createGraphIssueBlocks,
   createSummary,
-  isTerminalOrchestratorState,
 } from "./orchestrator-runtime-actions.js";
 import {
   buildGraphOutput,
@@ -101,7 +99,13 @@ export async function runOrchestratorGraph(
 
   if (!validation.ok) {
     const blocked = createGraphIssueBlocks(validation.issues);
-    const summary = createSummary("invalid-graph", [], blocked, state, validation.issues);
+    const summary = createSummary(
+      "invalid-graph",
+      [],
+      blocked,
+      state,
+      validation.issues,
+    );
     const output = buildGraphOutput({
       orchestrator_id: input.orchestrator_id,
       persisted: false,
@@ -121,12 +125,15 @@ export async function runOrchestratorGraph(
         state,
         summary,
         context: persistedContext,
-        runtime: buildGraphRuntimeState({
-          state,
-          next_actions: [],
-          blocked_work_items: blocked,
-          summary,
-        }, updatedAt),
+        runtime: buildGraphRuntimeState(
+          {
+            state,
+            next_actions: [],
+            blocked_work_items: blocked,
+            summary,
+          },
+          updatedAt,
+        ),
         updatedAt,
       });
       return buildGraphOutput({
@@ -138,21 +145,29 @@ export async function runOrchestratorGraph(
     if (input.persist && !store) {
       return buildGraphOutput({
         ...output,
-        persistence_warning: "SQLite persistence unavailable; orchestrator snapshot was not saved.",
+        persistence_warning:
+          "SQLite persistence unavailable; orchestrator snapshot was not saved.",
       });
     }
 
     return output;
   }
 
-  const nextActions = [] as Array<CodexWorkAction | GeminiPlanAction | GeminiCodeAction>;
+  const nextActions = [] as Array<
+    CodexWorkAction | GeminiPlanAction | GeminiCodeAction
+  >;
   const blockedWorkItems: BlockedWorkItem[] = [];
-  const order = new Map(validation.ordered_work_item_ids.map((id, index) => [id, index]));
+  const order = new Map(
+    validation.ordered_work_item_ids.map((id, index) => [id, index]),
+  );
   const readyItems = getReadyWorkItems({
     schema_version: state.schema_version,
     work_items: state.work_items,
   }).sort((left, right) => {
-    return (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER);
+    return (
+      (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+      (order.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+    );
   });
 
   for (const workItem of readyItems) {
@@ -176,7 +191,9 @@ export async function runOrchestratorGraph(
     }
 
     if (workItem.type === "frontend-plan") {
-      nextActions.push(createGeminiPlanAction(workItem, runtimeInput, input, state));
+      nextActions.push(
+        createGeminiPlanAction(workItem, runtimeInput, input, state),
+      );
       continue;
     }
 
@@ -190,7 +207,9 @@ export async function runOrchestratorGraph(
       continue;
     }
 
-    nextActions.push(createGeminiCodeAction(workItem, runtimeInput, input, state));
+    nextActions.push(
+      createGeminiCodeAction(workItem, runtimeInput, input, state),
+    );
   }
 
   for (const workItem of state.work_items) {
@@ -198,8 +217,9 @@ export async function runOrchestratorGraph(
       continue;
     }
 
-    const alreadyTracked = nextActions.some((item) => item.work_item_id === workItem.id)
-      || blockedWorkItems.some((item) => item.work_item_id === workItem.id);
+    const alreadyTracked =
+      nextActions.some((item) => item.work_item_id === workItem.id) ||
+      blockedWorkItems.some((item) => item.work_item_id === workItem.id);
     if (alreadyTracked) {
       continue;
     }
@@ -215,7 +235,9 @@ export async function runOrchestratorGraph(
     }
 
     const unmetDeps = workItem.deps.filter((dependencyId) => {
-      const dependency = state.work_items.find((item) => item.id === dependencyId);
+      const dependency = state.work_items.find(
+        (item) => item.id === dependencyId,
+      );
       return dependency?.status !== "completed";
     });
 
@@ -239,17 +261,21 @@ export async function runOrchestratorGraph(
       state,
       summary,
       context: persistedContext,
-      runtime: buildGraphRuntimeState({
-        state,
-        next_actions: nextActions,
-        blocked_work_items: blockedWorkItems,
-        summary,
-      }, updatedAt),
+      runtime: buildGraphRuntimeState(
+        {
+          state,
+          next_actions: nextActions,
+          blocked_work_items: blockedWorkItems,
+          summary,
+        },
+        updatedAt,
+      ),
       updatedAt,
     });
     persisted = true;
   } else if (input.persist && !store) {
-    persistenceWarning = "SQLite persistence unavailable; orchestrator snapshot was not saved.";
+    persistenceWarning =
+      "SQLite persistence unavailable; orchestrator snapshot was not saved.";
   }
 
   return buildGraphOutput({
@@ -271,10 +297,14 @@ export function getOrchestratorState(
   options: { orchestratorStore?: OrchestratorStore },
 ): GetOrchestratorStateOutput {
   const input = getOrchestratorStateInputSchema.parse(rawInput);
-  const snapshot = options.orchestratorStore?.loadOrchestratorSnapshot(input.orchestrator_id);
+  const snapshot = options.orchestratorStore?.loadOrchestratorSnapshot(
+    input.orchestrator_id,
+  );
 
   if (!snapshot) {
-    throw new Error(`Orchestrator snapshot '${input.orchestrator_id}' not found.`);
+    throw new Error(
+      `Orchestrator snapshot '${input.orchestrator_id}' not found.`,
+    );
   }
 
   return getOrchestratorStateOutputSchema.parse({
@@ -288,15 +318,21 @@ export function getOrchestratorSummary(
   options: { orchestratorStore?: OrchestratorStore },
 ): GetOrchestratorSummaryOutput {
   const input = getOrchestratorSummaryInputSchema.parse(rawInput);
-  const snapshot = options.orchestratorStore?.loadOrchestratorSnapshot(input.orchestrator_id);
+  const snapshot = options.orchestratorStore?.loadOrchestratorSnapshot(
+    input.orchestrator_id,
+  );
 
   if (!snapshot) {
-    throw new Error(`Orchestrator snapshot '${input.orchestrator_id}' not found.`);
+    throw new Error(
+      `Orchestrator snapshot '${input.orchestrator_id}' not found.`,
+    );
   }
 
   return getOrchestratorSummaryOutputSchema.parse({
     schema_version: ORCHESTRATOR_SCHEMA_VERSION,
-    summary: snapshot.final_summary ?? buildOrchestratorFinalSummary(snapshot, snapshot.updated_at),
+    summary:
+      snapshot.final_summary ??
+      buildOrchestratorFinalSummary(snapshot, snapshot.updated_at),
     events: snapshot.events ?? [],
   });
 }
@@ -306,11 +342,7 @@ export async function runOrchestratorLoop(
   options?: RunOrchestratorLoopOptions,
 ): Promise<RunOrchestratorLoopOutput> {
   const input = runOrchestratorLoopInputSchema.parse(rawInput);
-  const {
-    auto_submit_gemini,
-    max_submissions,
-    ...graphInput
-  } = input;
+  const { auto_submit_gemini, max_submissions, ...graphInput } = input;
   const maxSubmissions = max_submissions ?? 1;
   const autoSubmitGemini = auto_submit_gemini !== false;
 
@@ -334,8 +366,14 @@ export async function runOrchestratorLoop(
   }
 
   const geminiActions = initial.next_actions.filter(isGeminiAction);
-  if (autoSubmitGemini && geminiActions.length > 0 && !options?.geminiTaskSubmitter) {
-    throw new Error("run_orchestrator_loop requires a geminiTaskSubmitter when auto_submit_gemini is enabled.");
+  if (
+    autoSubmitGemini &&
+    geminiActions.length > 0 &&
+    !options?.geminiTaskSubmitter
+  ) {
+    throw new Error(
+      "run_orchestrator_loop requires a geminiTaskSubmitter when auto_submit_gemini is enabled.",
+    );
   }
 
   let nextState = initial.state;
@@ -346,7 +384,7 @@ export async function runOrchestratorLoop(
       }
 
       const submission = submittedTaskSchema.parse(
-        await options.geminiTaskSubmitter.submit(action)
+        await options.geminiTaskSubmitter.submit(action),
       );
       submittedTasks.push(submission);
       nextState = bindTaskToWorkItem(nextState, {
@@ -366,16 +404,17 @@ export async function runOrchestratorLoop(
     }
   }
 
-  const finalState = submittedTasks.length > 0
-    ? await runOrchestratorGraph(
-      {
-        ...graphInput,
-        state: nextState,
-        load_if_exists: false,
-      },
-      options,
-    )
-    : initial;
+  const finalState =
+    submittedTasks.length > 0
+      ? await runOrchestratorGraph(
+          {
+            ...graphInput,
+            state: nextState,
+            load_if_exists: false,
+          },
+          options,
+        )
+      : initial;
 
   const loopOutput = buildLoopOutput({
     orchestrator_id: finalState.orchestrator_id,

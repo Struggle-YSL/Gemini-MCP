@@ -20,9 +20,13 @@ import {
 } from "./implement-frontend-task.js";
 import { executePlanFrontendSolution } from "./plan-frontend-solution.js";
 
-export function createGeminiTaskSubmitter(taskStore: TaskStore): GeminiTaskSubmitter {
+export function createGeminiTaskSubmitter(
+  taskStore: TaskStore,
+): GeminiTaskSubmitter {
   return {
-    submit: async (action: GeminiPlanAction | GeminiCodeAction): Promise<SubmittedTask> => {
+    submit: async (
+      action: GeminiPlanAction | GeminiCodeAction,
+    ): Promise<SubmittedTask> => {
       if (action.kind === "gemini-plan") {
         const task = await submitManagedTask(
           action.tool_name,
@@ -69,13 +73,16 @@ export function registerRunOrchestratorLoop(
     "执行一次 orchestrator loop tick：推进 DAG、自动提交 ready 的 Gemini work item，并返回更新后的编排状态",
     runOrchestratorLoopInputSchema.shape,
     async (args) => {
-      const result = await runOrchestratorLoop(args as RunOrchestratorLoopInput, {
-        orchestratorStore: options?.orchestratorStore,
-        taskStore: options?.taskStore,
-        geminiTaskSubmitter: options?.taskStore
-          ? createGeminiTaskSubmitter(options.taskStore)
-          : undefined,
-      });
+      const result = await runOrchestratorLoop(
+        args as RunOrchestratorLoopInput,
+        {
+          orchestratorStore: options?.orchestratorStore,
+          taskStore: options?.taskStore,
+          geminiTaskSubmitter: options?.taskStore
+            ? createGeminiTaskSubmitter(options.taskStore)
+            : undefined,
+        },
+      );
       if (result.persisted && result.orchestrator_id) {
         options?.runtimeManager?.register(result.orchestrator_id);
       }

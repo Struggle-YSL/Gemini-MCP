@@ -4,7 +4,10 @@ import type {
   PersistedOrchestratorRuntimeState,
   RunOrchestratorLoopInput,
 } from "./orchestrator-runtime.js";
-import type { OrchestratorSnapshot, OrchestratorStore } from "./sqlite-persistence.js";
+import type {
+  OrchestratorSnapshot,
+  OrchestratorStore,
+} from "./sqlite-persistence.js";
 import {
   appendWorkItemStatusTransitionEvents,
   appendSubmittedTaskEvents,
@@ -120,9 +123,13 @@ export async function processManagedRun(
     });
 
     const runtime = failedSnapshot.runtime as PersistedOrchestratorRuntimeState;
-    log("warn", "Orchestrator run recovery skipped because context is missing", {
-      orchestratorId,
-    });
+    log(
+      "warn",
+      "Orchestrator run recovery skipped because context is missing",
+      {
+        orchestratorId,
+      },
+    );
     return { type: "tracked", runtime, requeue: false };
   }
 
@@ -143,15 +150,25 @@ export async function processManagedRun(
       return { type: "drop-track" };
     }
 
-    const previousStatus = new Map(snapshot.state.work_items.map((item) => [item.id, item.status]));
+    const previousStatus = new Map(
+      snapshot.state.work_items.map((item) => [item.id, item.status]),
+    );
     const updatedAt = nowIso();
 
     let nextSnapshot: OrchestratorSnapshot = {
       ...latest,
       events: appendMissingTaskEvents(latest),
     };
-    nextSnapshot = appendWorkItemStatusTransitionEvents(nextSnapshot, previousStatus, updatedAt);
-    nextSnapshot = appendSubmittedTaskEvents(nextSnapshot, output.submitted_tasks, updatedAt);
+    nextSnapshot = appendWorkItemStatusTransitionEvents(
+      nextSnapshot,
+      previousStatus,
+      updatedAt,
+    );
+    nextSnapshot = appendSubmittedTaskEvents(
+      nextSnapshot,
+      output.submitted_tasks,
+      updatedAt,
+    );
 
     const reconciled = applyFailurePolicy({
       snapshot: nextSnapshot,
@@ -162,8 +179,10 @@ export async function processManagedRun(
     nextSnapshot = persistSnapshot(store, reconciled.snapshot);
 
     if (
-      nextSnapshot.runtime?.status === "completed"
-      && !(nextSnapshot.events ?? []).some((event) => event.event_type === "run-completed")
+      nextSnapshot.runtime?.status === "completed" &&
+      !(nextSnapshot.events ?? []).some(
+        (event) => event.event_type === "run-completed",
+      )
     ) {
       nextSnapshot = persistSnapshot(store, {
         ...nextSnapshot,
@@ -177,10 +196,12 @@ export async function processManagedRun(
       });
     }
 
-    const finalRuntime = nextSnapshot.runtime ?? createFailedRecoveryState(
-      "Missing runtime state after orchestrator persistence.",
-      updatedAt,
-    );
+    const finalRuntime =
+      nextSnapshot.runtime ??
+      createFailedRecoveryState(
+        "Missing runtime state after orchestrator persistence.",
+        updatedAt,
+      );
 
     if (isTerminalRuntimeStatus(finalRuntime.status)) {
       log("info", "Orchestrator run reached terminal state", {
@@ -196,12 +217,10 @@ export async function processManagedRun(
     };
   } catch (error) {
     const updatedAt = nowIso();
-    const failedSnapshot = persistSnapshot(store, buildRecoveryFailureSnapshot(
-      orchestratorId,
-      snapshot,
-      error,
-      updatedAt,
-    ));
+    const failedSnapshot = persistSnapshot(
+      store,
+      buildRecoveryFailureSnapshot(orchestratorId, snapshot, error, updatedAt),
+    );
     const runtime = failedSnapshot.runtime as PersistedOrchestratorRuntimeState;
     log("error", "Background orchestrator tick failed", {
       orchestratorId,

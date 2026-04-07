@@ -39,9 +39,7 @@ export class OrchestratorRuntimeManager {
   private timer: NodeJS.Timeout | null = null;
   private recoveredRuns = 0;
 
-  constructor(
-    private readonly options: OrchestratorRuntimeManagerOptions,
-  ) {
+  constructor(private readonly options: OrchestratorRuntimeManagerOptions) {
     this.tickMs = options.tickMs ?? 1500;
     this.maxActiveRuns = options.maxActiveRuns ?? 2;
     this.recoveryLimit = options.recoveryLimit ?? 100;
@@ -54,7 +52,10 @@ export class OrchestratorRuntimeManager {
       return;
     }
 
-    const snapshots = this.options.orchestratorStore?.listRecoverableOrchestratorRuns(this.recoveryLimit) ?? [];
+    const snapshots =
+      this.options.orchestratorStore?.listRecoverableOrchestratorRuns(
+        this.recoveryLimit,
+      ) ?? [];
     this.recoveredRuns = snapshots.length;
     for (const snapshot of snapshots) {
       this.enqueueSnapshot(snapshot, true);
@@ -74,7 +75,8 @@ export class OrchestratorRuntimeManager {
   }
 
   register(orchestratorId: string): boolean {
-    const snapshot = this.options.orchestratorStore?.loadOrchestratorSnapshot(orchestratorId);
+    const snapshot =
+      this.options.orchestratorStore?.loadOrchestratorSnapshot(orchestratorId);
     if (!snapshot) {
       return false;
     }
@@ -99,7 +101,10 @@ export class OrchestratorRuntimeManager {
     };
   }
 
-  private enqueueSnapshot(snapshot: OrchestratorSnapshot, recovered: boolean): void {
+  private enqueueSnapshot(
+    snapshot: OrchestratorSnapshot,
+    recovered: boolean,
+  ): void {
     const store = this.options.orchestratorStore;
     if (!store) {
       return;
@@ -126,11 +131,14 @@ export class OrchestratorRuntimeManager {
     }
 
     nextSnapshot = persistSnapshot(store, nextSnapshot);
-    this.track(snapshot.orchestrator_id, nextSnapshot.runtime as PersistedOrchestratorRuntimeState);
+    this.track(
+      snapshot.orchestrator_id,
+      nextSnapshot.runtime as PersistedOrchestratorRuntimeState,
+    );
 
     if (
-      !this.runningRunIds.has(snapshot.orchestrator_id)
-      && !this.queuedRunIds.includes(snapshot.orchestrator_id)
+      !this.runningRunIds.has(snapshot.orchestrator_id) &&
+      !this.queuedRunIds.includes(snapshot.orchestrator_id)
     ) {
       this.queuedRunIds.push(snapshot.orchestrator_id);
     }
@@ -142,7 +150,10 @@ export class OrchestratorRuntimeManager {
     }
   }
 
-  private track(orchestratorId: string, runtime: PersistedOrchestratorRuntimeState): void {
+  private track(
+    orchestratorId: string,
+    runtime: PersistedOrchestratorRuntimeState,
+  ): void {
     this.trackedRuns.set(orchestratorId, {
       orchestrator_id: orchestratorId,
       status: runtime.status,
@@ -152,7 +163,10 @@ export class OrchestratorRuntimeManager {
   }
 
   private async dispatch(): Promise<void> {
-    while (this.runningRunIds.size < this.maxActiveRuns && this.queuedRunIds.length > 0) {
+    while (
+      this.runningRunIds.size < this.maxActiveRuns &&
+      this.queuedRunIds.length > 0
+    ) {
       const orchestratorId = this.queuedRunIds.shift();
       if (!orchestratorId || this.runningRunIds.has(orchestratorId)) {
         continue;
@@ -165,7 +179,10 @@ export class OrchestratorRuntimeManager {
     }
   }
 
-  private applyProcessResult(orchestratorId: string, result: ProcessManagedRunResult): void {
+  private applyProcessResult(
+    orchestratorId: string,
+    result: ProcessManagedRunResult,
+  ): void {
     if (result.type === "drop-track") {
       this.trackedRuns.delete(orchestratorId);
       return;

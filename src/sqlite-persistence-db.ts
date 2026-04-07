@@ -56,12 +56,16 @@ function ensureTableColumn(
   columnName: string,
   columnDefinition: string,
 ): void {
-  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as TableInfoRow[];
+  const columns = db
+    .prepare(`PRAGMA table_info(${tableName})`)
+    .all() as TableInfoRow[];
   if (columns.some((column) => column.name === columnName)) {
     return;
   }
 
-  db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`);
+  db.exec(
+    `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`,
+  );
 }
 
 export function initializeSchema(db: DatabaseSync): void {
@@ -125,12 +129,18 @@ export function initializeSchema(db: DatabaseSync): void {
   ensureTableColumn(db, "orchestrator_snapshots", "final_summary_json", "TEXT");
 }
 
-export function recoverInterruptedTasks(db: DatabaseSync): SQLiteRecoverySummary {
-  const rows = db.prepare(`
+export function recoverInterruptedTasks(
+  db: DatabaseSync,
+): SQLiteRecoverySummary {
+  const rows = db
+    .prepare(
+      `
     SELECT task_id, status, ttl
     FROM tasks
     WHERE status NOT IN ('completed', 'failed', 'cancelled')
-  `).all() as RecoveryTaskRow[];
+  `,
+    )
+    .all() as RecoveryTaskRow[];
 
   if (rows.length === 0) {
     return {

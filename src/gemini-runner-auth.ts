@@ -11,7 +11,10 @@ interface AuthCheckCache {
   nextProbeAt: number;
 }
 
-type GeminiAuthProbeRunner = (execPath: string, timeoutMs: number) => Promise<string>;
+type GeminiAuthProbeRunner = (
+  execPath: string,
+  timeoutMs: number,
+) => Promise<string>;
 
 const DEFAULT_AUTH_PROBE_TIMEOUT_MS = 30_000;
 const AUTH_PROBE_BACKOFF_MS = 10 * 60 * 1000;
@@ -30,8 +33,10 @@ export class GeminiAuthController {
   private readonly authProbeBackoffMs: number;
 
   constructor(options: GeminiAuthControllerOptions = {}) {
-    this.authProbeTimeoutMs = options.authProbeTimeoutMs ?? DEFAULT_AUTH_PROBE_TIMEOUT_MS;
-    this.authProbeBackoffMs = options.authProbeBackoffMs ?? AUTH_PROBE_BACKOFF_MS;
+    this.authProbeTimeoutMs =
+      options.authProbeTimeoutMs ?? DEFAULT_AUTH_PROBE_TIMEOUT_MS;
+    this.authProbeBackoffMs =
+      options.authProbeBackoffMs ?? AUTH_PROBE_BACKOFF_MS;
   }
 
   reset(): void {
@@ -63,7 +68,10 @@ export class GeminiAuthController {
         return;
       }
 
-      if (this.authCheckCache.status === "unauthenticated" && this.authCheckCache.nextProbeAt > now) {
+      if (
+        this.authCheckCache.status === "unauthenticated" &&
+        this.authCheckCache.nextProbeAt > now
+      ) {
         throw createAuthError();
       }
 

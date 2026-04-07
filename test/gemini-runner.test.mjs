@@ -38,7 +38,15 @@ test("getRuntimeDiagnostics prunes expired sessions from configured store", () =
   assert.equal(diagnostics.activeSessions, 1);
   assert.equal(store.size(), 1);
   assert.equal(store.get("expired-session"), undefined);
-  assert.ok(["env", "windows-registry", "none"].includes(diagnostics.proxySource));
+  assert.ok(
+    [
+      "env",
+      "windows-registry",
+      "macos-scutil",
+      "linux-gsettings",
+      "none",
+    ].includes(diagnostics.proxySource),
+  );
 });
 
 test("getGeminiErrorMeta normalizes generic and primitive errors", () => {

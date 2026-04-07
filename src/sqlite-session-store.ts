@@ -6,10 +6,14 @@ export class SQLiteGeminiSessionStore implements GeminiSessionStore {
   private readonly sessions = new Map<string, SessionState>();
 
   constructor(private readonly db: DatabaseSync) {
-    const rows = this.db.prepare(`
+    const rows = this.db
+      .prepare(
+        `
       SELECT id, native_session_id, created_at, updated_at, turns_json
       FROM gemini_sessions ORDER BY updated_at DESC
-    `).all() as SessionRow[];
+    `,
+      )
+      .all() as SessionRow[];
 
     for (const row of rows) {
       this.sessions.set(row.id, {
@@ -28,7 +32,9 @@ export class SQLiteGeminiSessionStore implements GeminiSessionStore {
 
   set(session: SessionState): void {
     this.sessions.set(session.id, session);
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT INTO gemini_sessions (id, native_session_id, created_at, updated_at, turns_json)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -36,13 +42,15 @@ export class SQLiteGeminiSessionStore implements GeminiSessionStore {
         created_at = excluded.created_at,
         updated_at = excluded.updated_at,
         turns_json = excluded.turns_json
-    `).run(
-      session.id,
-      session.nativeSessionId,
-      session.createdAt,
-      session.updatedAt,
-      JSON.stringify(session.turns),
-    );
+    `,
+      )
+      .run(
+        session.id,
+        session.nativeSessionId,
+        session.createdAt,
+        session.updatedAt,
+        JSON.stringify(session.turns),
+      );
   }
 
   delete(id: string): void {

@@ -35,7 +35,7 @@ function readNonEmptyEnvValue(
 function parseIntegerWithBounds(
   raw: string | undefined,
   fallback: number,
-  options: { min?: number; max?: number } = {}
+  options: { min?: number; max?: number } = {},
 ): number {
   if (!raw) {
     return fallback;
@@ -62,14 +62,20 @@ function parseLogLevel(raw: string | undefined, fallback: LogLevel): LogLevel {
   }
 
   const normalized = raw.trim().toLowerCase();
-  if (normalized === "info" || normalized === "warn" || normalized === "error") {
+  if (
+    normalized === "info" ||
+    normalized === "warn" ||
+    normalized === "error"
+  ) {
     return normalized;
   }
 
   return fallback;
 }
 
-export function resolveRuntimeConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
+export function resolveRuntimeConfig(
+  env: NodeJS.ProcessEnv = process.env,
+): RuntimeConfig {
   return {
     dbPath: readNonEmptyEnvValue(env, "GEMINI_MCP_DB_PATH"),
     maxActiveOrchestrators: parseIntegerWithBounds(
@@ -88,7 +94,11 @@ export function resolveRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Runt
       { min: 0 },
     ),
     maxFrontendTasks: parseIntegerWithBounds(
-      readNonEmptyEnvValue(env, "GEMINI_MCP_MAX_FRONTEND_TASKS", "GEMINI_MCP_MAX_CONCURRENT_TASKS"),
+      readNonEmptyEnvValue(
+        env,
+        "GEMINI_MCP_MAX_FRONTEND_TASKS",
+        "GEMINI_MCP_MAX_CONCURRENT_TASKS",
+      ),
       DEFAULT_MAX_FRONTEND_TASKS,
       { min: 1 },
     ),

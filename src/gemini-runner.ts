@@ -1,6 +1,4 @@
-import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import * as path from "node:path";
 import {
   createInMemoryGeminiSessionStore,
   type GeminiSessionStore,
@@ -28,6 +26,10 @@ import {
 } from "./gemini-runner-session.js";
 import { GeminiAuthController } from "./gemini-runner-auth.js";
 import { runOnce, type RunOptions } from "./gemini-runner-process.js";
+import {
+  resolveGemini,
+  type GeminiResolution,
+} from "./gemini-runner-discovery.js";
 
 export interface GeminiOptions {
   /** Gemini 模型名称，不传则使用 gemini CLI 的默认模型 */
@@ -51,13 +53,6 @@ export interface GeminiToolResult {
   sessionReused: boolean;
 }
 
-export interface GeminiResolution {
-  /** gemini 可执行文件完整路径，找不到时为 null */
-  execPath: string | null;
-  /** npm global bin 目录 */
-  globalBinDir: string;
-}
-
 interface GeminiJsonResult {
   sessionId: string | null;
   text: string;
@@ -66,71 +61,11 @@ interface GeminiJsonResult {
 const DEFAULT_GEMINI_TIMEOUT_MS = 120_000;
 const AUTH_PROBE_PROMPT = "reply with: ok";
 
-function resolveGemini(): GeminiResolution {
-  if (process.env.GEMINI_PATH) {
-    const customPath = process.env.GEMINI_PATH;
-    if (existsSync(customPath)) {
-      return { execPath: customPath, globalBinDir: path.dirname(customPath) };
-    }
-  }
-
-  const npmCommands = process.platform === "win32"
-    ? ["npm.cmd", "npm"]
-    : ["npm"];
-
-  for (const npmCmd of npmCommands) {
-    try {
-      const prefix = execSync(`${npmCmd} config get prefix`, {
-        encoding: "utf8",
-        timeout: 5000,
-      }).trim();
-
-      const globalBinDir = process.platform === "win32"
-        ? prefix
-        : path.join(prefix, "bin");
-
-      const candidates = process.platform === "win32"
-        ? [
-            path.join(globalBinDir, "gemini.cmd"),
-            path.join(globalBinDir, "gemini.exe"),
-            path.join(globalBinDir, "gemini"),
-          ]
-        : [path.join(globalBinDir, "gemini")];
-
-      for (const candidate of candidates) {
-        if (existsSync(candidate)) {
-          return { execPath: candidate, globalBinDir };
-        }
-      }
-    } catch {
-      // keep scanning candidates
-    }
-  }
-
-  if (process.platform === "win32") {
-    const fallbackDirs = [
-      process.env.APPDATA ? path.join(process.env.APPDATA, "npm") : "",
-      process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, "npm") : "",
-    ].filter(Boolean);
-
-    for (const dir of fallbackDirs) {
-      for (const name of ["gemini.cmd", "gemini.exe", "gemini"]) {
-        const candidate = path.join(dir, name);
-        if (existsSync(candidate)) {
-          return { execPath: candidate, globalBinDir: dir };
-        }
-      }
-    }
-  }
-
-  return { execPath: null, globalBinDir: "" };
-}
-
 export const GEMINI = resolveGemini();
 const authController = new GeminiAuthController();
 let sessionStore: GeminiSessionStore = createInMemoryGeminiSessionStore();
 
-export type { LoggerConfiguration };
+export type { LoggerConfiguration, GeminiResolution };
 export { configureLogger, getGeminiErrorMeta, log };
 
 export function configureGeminiSessionStore(store: GeminiSessionStore): void {
@@ -153,13 +88,16 @@ export function ensureGeminiPath(): string {
   authController.reset();
 
   if (!GEMINI.execPath) {
-    throw createMissingCliError(GEMINI.globalBinDir);
+    throw createMissingCliError(GEMINI.searchedPaths);
   }
 
   return GEMINI.execPath;
 }
 
-export function getRuntimeDiagnostics(): { proxySource: ProxySource; activeSessions: number } {
+export function getRuntimeDiagnostics(): {
+  proxySource: ProxySource;
+  activeSessions: number;
+} {
   pruneExpiredSessions(sessionStore);
   return {
     proxySource: resolveProxyEnv().source,
@@ -174,8 +112,9 @@ export async function runGeminiTool(
 ): Promise<GeminiToolResult> {
   const { sessionId, ...geminiOptions } = options;
   const selection = getSessionSelection(sessionStore, sessionId);
-  const resumeSessionId = selection.session.nativeSessionId
-    ?? (selection.reused ? selection.session.id : undefined);
+  const resumeSessionId =
+    selection.session.nativeSessionId ??
+    (selection.reused ? selection.session.id : undefined);
 
   try {
     const nativeResult = await runGeminiWithJsonOutput(prompt, {
@@ -183,8 +122,18 @@ export async function runGeminiTool(
       sessionId: selection.reused ? resumeSessionId : undefined,
     });
 
-    assignNativeSessionId(sessionStore, selection.session, nativeResult.sessionId);
-    rememberSessionTurn(sessionStore, selection.session, toolName, prompt, nativeResult.text);
+    assignNativeSessionId(
+      sessionStore,
+      selection.session,
+      nativeResult.sessionId,
+    );
+    rememberSessionTurn(
+      sessionStore,
+      selection.session,
+      toolName,
+      prompt,
+      nativeResult.text,
+    );
 
     return {
       text: nativeResult.text,
@@ -193,18 +142,33 @@ export async function runGeminiTool(
     };
   } catch (error) {
     const meta = getGeminiErrorMeta(error);
-    const canFallbackToReplay = meta.kind === "session" && selection.session.turns.length > 0;
+    const canFallbackToReplay =
+      meta.kind === "session" && selection.session.turns.length > 0;
 
     if (canFallbackToReplay) {
-      log("warn", "Gemini native session resume failed, falling back to in-memory replay", {
-        toolName,
-        sessionId: selection.session.id,
-        error: meta.message,
-      });
+      log(
+        "warn",
+        "Gemini native session resume failed, falling back to in-memory replay",
+        {
+          toolName,
+          sessionId: selection.session.id,
+          error: meta.message,
+        },
+      );
 
-      const effectivePrompt = buildSessionPrompt(prompt, toolName, selection.session);
+      const effectivePrompt = buildSessionPrompt(
+        prompt,
+        toolName,
+        selection.session,
+      );
       const text = await runGemini(effectivePrompt, geminiOptions);
-      rememberSessionTurn(sessionStore, selection.session, toolName, prompt, text);
+      rememberSessionTurn(
+        sessionStore,
+        selection.session,
+        toolName,
+        prompt,
+        text,
+      );
 
       return {
         text,
@@ -236,10 +200,20 @@ export async function runGemini(
   options: GeminiOptions = {},
 ): Promise<string> {
   const execPath = ensureGeminiPath();
-  const { model, timeout = DEFAULT_GEMINI_TIMEOUT_MS, retries = 1, signal } = options;
+  const {
+    model,
+    timeout = DEFAULT_GEMINI_TIMEOUT_MS,
+    retries = 1,
+    signal,
+  } = options;
   signal?.throwIfAborted();
   authController.ensureAuth(execPath, runAuthProbe);
-  return runWithRetry(execPath, prompt, { model, timeout, outputFormat: "text", signal }, retries);
+  return runWithRetry(
+    execPath,
+    prompt,
+    { model, timeout, outputFormat: "text", signal },
+    retries,
+  );
 }
 
 async function runGeminiWithJsonOutput(
@@ -247,16 +221,27 @@ async function runGeminiWithJsonOutput(
   options: GeminiOptions & { sessionId?: string } = {},
 ): Promise<GeminiJsonResult> {
   const execPath = ensureGeminiPath();
-  const { model, timeout = DEFAULT_GEMINI_TIMEOUT_MS, retries = 1, sessionId, signal } = options;
+  const {
+    model,
+    timeout = DEFAULT_GEMINI_TIMEOUT_MS,
+    retries = 1,
+    sessionId,
+    signal,
+  } = options;
   signal?.throwIfAborted();
   authController.ensureAuth(execPath, runAuthProbe);
-  const raw = await runWithRetry(execPath, prompt, {
-    model,
-    timeout,
-    outputFormat: "json",
-    resumeSessionId: sessionId,
-    signal,
-  }, retries);
+  const raw = await runWithRetry(
+    execPath,
+    prompt,
+    {
+      model,
+      timeout,
+      outputFormat: "json",
+      resumeSessionId: sessionId,
+      signal,
+    },
+    retries,
+  );
   const payload = extractJsonPayload(raw);
 
   return {

@@ -17,7 +17,10 @@ export interface SessionSelection {
   session: SessionState;
 }
 
-export function pruneExpiredSessions(sessionStore: GeminiSessionStore, now = Date.now()): void {
+export function pruneExpiredSessions(
+  sessionStore: GeminiSessionStore,
+  now = Date.now(),
+): void {
   for (const [id, session] of sessionStore.entries()) {
     if (now - session.updatedAt > SESSION_TTL_MS) {
       sessionStore.delete(id);
@@ -28,7 +31,7 @@ export function pruneExpiredSessions(sessionStore: GeminiSessionStore, now = Dat
 function createSessionState(
   sessionStore: GeminiSessionStore,
   id: string = randomUUID(),
-  nativeSessionId: string | null = null
+  nativeSessionId: string | null = null,
 ): SessionState {
   const now = Date.now();
   const session: SessionState = {
@@ -44,7 +47,7 @@ function createSessionState(
 
 export function getSessionSelection(
   sessionStore: GeminiSessionStore,
-  sessionId?: string
+  sessionId?: string,
 ): SessionSelection {
   pruneExpiredSessions(sessionStore);
 
@@ -80,7 +83,7 @@ export function getSessionSelection(
 export function assignNativeSessionId(
   sessionStore: GeminiSessionStore,
   session: SessionState,
-  nativeSessionId: string | null
+  nativeSessionId: string | null,
 ): void {
   if (!nativeSessionId) {
     return;
@@ -109,7 +112,11 @@ function formatSessionTurn(turn: SessionTurn, index: number): string {
   ].join("\n");
 }
 
-export function buildSessionPrompt(prompt: string, toolName: string, session: SessionState): string {
+export function buildSessionPrompt(
+  prompt: string,
+  toolName: string,
+  session: SessionState,
+): string {
   if (session.turns.length === 0) {
     return prompt;
   }
@@ -120,7 +127,10 @@ export function buildSessionPrompt(prompt: string, toolName: string, session: Se
 
   for (let i = session.turns.length - 1; i >= 0; i -= 1) {
     const turnText = formatSessionTurn(session.turns[i], turnNumber);
-    if (selected.length > 0 && totalChars + turnText.length > SESSION_CHAR_BUDGET) {
+    if (
+      selected.length > 0 &&
+      totalChars + turnText.length > SESSION_CHAR_BUDGET
+    ) {
       break;
     }
 
@@ -152,7 +162,7 @@ export function rememberSessionTurn(
   session: SessionState,
   toolName: string,
   prompt: string,
-  response: string
+  response: string,
 ): void {
   session.turns.push({
     toolName,
@@ -171,7 +181,7 @@ export function rememberSessionTurn(
 
 export function cleanupFailedSession(
   sessionStore: GeminiSessionStore,
-  selection: SessionSelection
+  selection: SessionSelection,
 ): void {
   if (selection.created && selection.session.turns.length === 0) {
     sessionStore.delete(selection.session.id);

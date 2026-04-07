@@ -43,7 +43,11 @@ export function buildSpawnArgs(
   return { command: execPath, args: geminiArgs };
 }
 
-export function runOnce(execPath: string, prompt: string, options: RunOptions): Promise<string> {
+export function runOnce(
+  execPath: string,
+  prompt: string,
+  options: RunOptions,
+): Promise<string> {
   options.signal?.throwIfAborted();
 
   return new Promise((resolve, reject) => {

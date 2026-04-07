@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 import { resolveTaskExecutionOptions } from "../dist/task-tool-scheduling.js";
 
 test("resolveTaskExecutionOptions uses defaults when execution options are omitted", () => {
-  const resolved = resolveTaskExecutionOptions("implement_frontend_task", undefined);
+  const resolved = resolveTaskExecutionOptions(
+    "implement_frontend_task",
+    undefined,
+  );
 
   assert.deepEqual(resolved, {
     mode: "immediate",

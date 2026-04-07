@@ -9,7 +9,11 @@ import {
 import type { TaskToolExecutionOptions } from "./task-tool-types.js";
 
 interface TaskExecutionStatusStore {
-  updateTaskStatus(taskId: string, status: Task["status"], statusMessage?: string): Promise<void>;
+  updateTaskStatus(
+    taskId: string,
+    status: Task["status"],
+    statusMessage?: string,
+  ): Promise<void>;
 }
 
 interface ResolvedTaskExecutionOptions {
@@ -34,7 +38,10 @@ export function resolveTaskExecutionOptions(
 ): ResolvedTaskExecutionOptions {
   const mode = execution?.mode ?? "immediate";
   const requestedQueueKey = execution?.queueKey?.trim();
-  const queueKey = requestedQueueKey && requestedQueueKey.length > 0 ? requestedQueueKey : toolName;
+  const queueKey =
+    requestedQueueKey && requestedQueueKey.length > 0
+      ? requestedQueueKey
+      : toolName;
   const concurrencyLimit = execution?.concurrencyLimit ?? 1;
 
   return {

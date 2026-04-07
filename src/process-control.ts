@@ -2,7 +2,11 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { RUNTIME_CONFIG } from "./config.js";
 
 export type ProcessTerminationReason = "abort" | "timeout";
-export type ProcessTerminationOutcome = "graceful" | "forced" | "already-exited" | "failed-to-terminate";
+export type ProcessTerminationOutcome =
+  | "graceful"
+  | "forced"
+  | "already-exited"
+  | "failed-to-terminate";
 
 export interface ProcessTerminationResult {
   outcome: ProcessTerminationOutcome;
@@ -29,7 +33,10 @@ export interface ProcessTerminationDiagnostics {
 export interface ProcessControlDependencies {
   now?: () => number;
   platform?: NodeJS.Platform;
-  spawnForceKillTree?: (pid: number, platform: NodeJS.Platform) => Promise<void>;
+  spawnForceKillTree?: (
+    pid: number,
+    platform: NodeJS.Platform,
+  ) => Promise<void>;
 }
 
 export interface TerminateProcessTreeOptions {
@@ -56,11 +63,15 @@ function isProcessExited(proc: ChildProcess): boolean {
   return proc.exitCode !== null || proc.signalCode !== null;
 }
 
-function cloneResult(result: ProcessTerminationResult | null): ProcessTerminationResult | null {
+function cloneResult(
+  result: ProcessTerminationResult | null,
+): ProcessTerminationResult | null {
   return result ? { ...result } : null;
 }
 
-function recordProcessTermination(result: ProcessTerminationResult): ProcessTerminationResult {
+function recordProcessTermination(
+  result: ProcessTerminationResult,
+): ProcessTerminationResult {
   terminationDiagnostics.totalRequests += 1;
   switch (result.outcome) {
     case "graceful":
@@ -142,7 +153,10 @@ function waitForExit(proc: ChildProcess, timeoutMs: number): Promise<boolean> {
   });
 }
 
-function tryKill(proc: ChildProcess, signal?: NodeJS.Signals): string | undefined {
+function tryKill(
+  proc: ChildProcess,
+  signal?: NodeJS.Signals,
+): string | undefined {
   try {
     const ok = signal ? proc.kill(signal) : proc.kill();
     if (!ok && !isProcessExited(proc)) {
@@ -188,15 +202,20 @@ function spawnCommand(
   });
 }
 
-async function defaultForceKillTree(pid: number, platform: NodeJS.Platform): Promise<void> {
+async function defaultForceKillTree(
+  pid: number,
+  platform: NodeJS.Platform,
+): Promise<void> {
   if (platform === "win32") {
     await spawnCommand("taskkill", ["/pid", String(pid), "/T", "/F"], platform);
     return;
   }
 
-  await spawnCommand("pkill", ["-KILL", "-P", String(pid)], platform).catch(() => {
-    return undefined;
-  });
+  await spawnCommand("pkill", ["-KILL", "-P", String(pid)], platform).catch(
+    () => {
+      return undefined;
+    },
+  );
 }
 
 export function getProcessTerminationDiagnostics(): ProcessTerminationDiagnostics {
@@ -232,37 +251,40 @@ export async function terminateProcessTree(
   const forceWaitMs = options.forceWaitMs ?? DEFAULT_FORCE_WAIT_MS;
 
   if (isProcessExited(proc)) {
-    return recordProcessTermination(createTerminationResult(
-      "already-exited",
-      options.reason,
-      platform,
-      pid,
-      requestedAt,
-      gracePeriodMs,
-      forceWaitMs,
-      false,
-      now(),
-    ));
+    return recordProcessTermination(
+      createTerminationResult(
+        "already-exited",
+        options.reason,
+        platform,
+        pid,
+        requestedAt,
+        gracePeriodMs,
+        forceWaitMs,
+        false,
+        now(),
+      ),
+    );
   }
 
-  const gracefulError = platform === "win32"
-    ? tryKill(proc)
-    : tryKill(proc, "SIGTERM");
+  const gracefulError =
+    platform === "win32" ? tryKill(proc) : tryKill(proc, "SIGTERM");
 
   const exitedGracefully = await waitForExit(proc, gracePeriodMs);
   if (exitedGracefully) {
-    return recordProcessTermination(createTerminationResult(
-      "graceful",
-      options.reason,
-      platform,
-      pid,
-      requestedAt,
-      gracePeriodMs,
-      forceWaitMs,
-      false,
-      now(),
-      gracefulError,
-    ));
+    return recordProcessTermination(
+      createTerminationResult(
+        "graceful",
+        options.reason,
+        platform,
+        pid,
+        requestedAt,
+        gracePeriodMs,
+        forceWaitMs,
+        false,
+        now(),
+        gracefulError,
+      ),
+    );
   }
 
   const errors = gracefulError ? [gracefulError] : [];
@@ -272,7 +294,8 @@ export async function terminateProcessTree(
       errors.push("Cannot force terminate process tree without a process id.");
     } else {
       try {
-        const forceKill = dependencies.spawnForceKillTree ?? defaultForceKillTree;
+        const forceKill =
+          dependencies.spawnForceKillTree ?? defaultForceKillTree;
         await forceKill(pid, platform);
       } catch (error) {
         errors.push(error instanceof Error ? error.message : String(error));
@@ -285,7 +308,8 @@ export async function terminateProcessTree(
     }
     if (pid !== null) {
       try {
-        const forceKill = dependencies.spawnForceKillTree ?? defaultForceKillTree;
+        const forceKill =
+          dependencies.spawnForceKillTree ?? defaultForceKillTree;
         await forceKill(pid, platform);
       } catch (error) {
         errors.push(error instanceof Error ? error.message : String(error));
@@ -295,8 +319,25 @@ export async function terminateProcessTree(
 
   const exitedForced = await waitForExit(proc, forceWaitMs);
   if (exitedForced) {
-    return recordProcessTermination(createTerminationResult(
-      "forced",
+    return recordProcessTermination(
+      createTerminationResult(
+        "forced",
+        options.reason,
+        platform,
+        pid,
+        requestedAt,
+        gracePeriodMs,
+        forceWaitMs,
+        true,
+        now(),
+        errors.length > 0 ? errors.join("; ") : undefined,
+      ),
+    );
+  }
+
+  return recordProcessTermination(
+    createTerminationResult(
+      "failed-to-terminate",
       options.reason,
       platform,
       pid,
@@ -306,20 +347,6 @@ export async function terminateProcessTree(
       true,
       now(),
       errors.length > 0 ? errors.join("; ") : undefined,
-    ));
-  }
-
-  return recordProcessTermination(createTerminationResult(
-    "failed-to-terminate",
-    options.reason,
-    platform,
-    pid,
-    requestedAt,
-    gracePeriodMs,
-    forceWaitMs,
-    true,
-    now(),
-    errors.length > 0 ? errors.join("; ") : undefined,
-  ));
+    ),
+  );
 }
-

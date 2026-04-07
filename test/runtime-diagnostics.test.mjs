@@ -52,7 +52,9 @@ class FakeChildProcess extends EventEmitter {
 }
 
 function createRuntime() {
-  const tempRoot = mkdtempSync(path.join(tmpdir(), "gemini-mcp-runtime-diagnostics-"));
+  const tempRoot = mkdtempSync(
+    path.join(tmpdir(), "gemini-mcp-runtime-diagnostics-"),
+  );
   const dbPath = path.join(tempRoot, "state.sqlite");
   const runtime = createSQLitePersistenceRuntime(dbPath);
   assert.ok(runtime, "expected SQLite persistence runtime to be available");
@@ -77,9 +79,24 @@ test("getRuntimeDiagnosticsSnapshot returns aggregated runtime state and detaile
   const cancelTaskId = `diag-task-cancel-${Date.now()}`;
   const failedTaskId = `diag-task-failed-${Date.now()}`;
 
-  registerTaskExecution(queuedTaskId, "implement_frontend_task", queueKey, "queued");
-  registerTaskExecution(cancelTaskId, "plan_frontend_solution", queueKey, "queued");
-  registerTaskExecution(failedTaskId, "plan_frontend_solution", queueKey, "running");
+  registerTaskExecution(
+    queuedTaskId,
+    "implement_frontend_task",
+    queueKey,
+    "queued",
+  );
+  registerTaskExecution(
+    cancelTaskId,
+    "plan_frontend_solution",
+    queueKey,
+    "queued",
+  );
+  registerTaskExecution(
+    failedTaskId,
+    "plan_frontend_solution",
+    queueKey,
+    "running",
+  );
 
   markTaskExecutionRunning(cancelTaskId);
   markTaskExecutionCancellationRequested(cancelTaskId);
@@ -136,14 +153,19 @@ test("getRuntimeDiagnosticsSnapshot returns aggregated runtime state and detaile
           graph: input.graph,
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "completed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "completed",
+            })),
           },
           summary: {
             status: "ok",
             message: "completed",
             ready_work_item_ids: [],
             waiting_work_item_ids: [],
-            completed_work_item_ids: input.state.work_items.map((item) => item.id),
+            completed_work_item_ids: input.state.work_items.map(
+              (item) => item.id,
+            ),
             failed_work_item_ids: [],
           },
           context: {
@@ -167,7 +189,10 @@ test("getRuntimeDiagnosticsSnapshot returns aggregated runtime state and detaile
           updated_at: new Date().toISOString(),
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "completed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "completed",
+            })),
           },
           submitted_tasks: [],
           codex_actions: [],
@@ -178,7 +203,9 @@ test("getRuntimeDiagnosticsSnapshot returns aggregated runtime state and detaile
             message: "completed",
             ready_work_item_ids: [],
             waiting_work_item_ids: [],
-            completed_work_item_ids: input.state.work_items.map((item) => item.id),
+            completed_work_item_ids: input.state.work_items.map(
+              (item) => item.id,
+            ),
             failed_work_item_ids: [],
           },
         };
@@ -188,24 +215,63 @@ test("getRuntimeDiagnosticsSnapshot returns aggregated runtime state and detaile
 
   manager.start();
   await delay(80);
-  const diagnostics = getRuntimeDiagnosticsSnapshot({}, {
-    sqlitePersistence: runtime,
-    orchestratorRuntimeManager: manager,
-  });
+  const diagnostics = getRuntimeDiagnosticsSnapshot(
+    {},
+    {
+      sqlitePersistence: runtime,
+      orchestratorRuntimeManager: manager,
+    },
+  );
   manager.stop();
 
   assert.equal(diagnostics.persistence.mode, "sqlite");
   assert.equal(diagnostics.orchestrator_runtime.enabled, true);
   assert.ok(diagnostics.orchestrator_runtime.diagnostics);
-  assert.ok(diagnostics.orchestrator_runtime.diagnostics.tracked_runs.some((run) => run.orchestrator_id === orchestratorId));
-  assert.ok(diagnostics.task_execution.records.some((record) => record.task_id === queuedTaskId));
-  assert.ok(diagnostics.task_execution.records.some((record) => record.task_id === cancelTaskId && record.state === "cancel_requested"));
-  assert.ok(diagnostics.task_execution.records.some((record) => record.task_id === failedTaskId && record.last_error_kind === "network"));
-  assert.ok(diagnostics.task_execution.schedulers.some((scheduler) => scheduler.queue_key === queueKey));
-  assert.equal(diagnostics.task_execution.failure_diagnostics.total_failed_tasks >= 1, true);
-  assert.equal(diagnostics.task_execution.failure_diagnostics.structured_failure_tasks >= 1, true);
-  assert.equal(diagnostics.task_execution.failure_diagnostics.retryable_failures >= 1, true);
-  assert.equal((diagnostics.task_execution.failure_diagnostics.failure_kinds.network ?? 0) >= 1, true);
+  assert.ok(
+    diagnostics.orchestrator_runtime.diagnostics.tracked_runs.some(
+      (run) => run.orchestrator_id === orchestratorId,
+    ),
+  );
+  assert.ok(
+    diagnostics.task_execution.records.some(
+      (record) => record.task_id === queuedTaskId,
+    ),
+  );
+  assert.ok(
+    diagnostics.task_execution.records.some(
+      (record) =>
+        record.task_id === cancelTaskId && record.state === "cancel_requested",
+    ),
+  );
+  assert.ok(
+    diagnostics.task_execution.records.some(
+      (record) =>
+        record.task_id === failedTaskId && record.last_error_kind === "network",
+    ),
+  );
+  assert.ok(
+    diagnostics.task_execution.schedulers.some(
+      (scheduler) => scheduler.queue_key === queueKey,
+    ),
+  );
+  assert.equal(
+    diagnostics.task_execution.failure_diagnostics.total_failed_tasks >= 1,
+    true,
+  );
+  assert.equal(
+    diagnostics.task_execution.failure_diagnostics.structured_failure_tasks >=
+      1,
+    true,
+  );
+  assert.equal(
+    diagnostics.task_execution.failure_diagnostics.retryable_failures >= 1,
+    true,
+  );
+  assert.equal(
+    (diagnostics.task_execution.failure_diagnostics.failure_kinds.network ??
+      0) >= 1,
+    true,
+  );
   assert.equal(typeof diagnostics.gemini_runtime.active_sessions, "number");
   assert.equal(diagnostics.process_control.total_requests >= 1, true);
   assert.equal(diagnostics.process_control.last_result?.reason, "abort");

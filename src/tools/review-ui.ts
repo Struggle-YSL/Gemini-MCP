@@ -15,9 +15,13 @@ const reviewUiInputSchema = {
   focus_areas: z
     .string()
     .optional()
-    .describe("审查重点，逗号分隔，如 accessibility, performance, mobile, design-consistency"),
+    .describe(
+      "审查重点，逗号分隔，如 accessibility, performance, mobile, design-consistency",
+    ),
   session_id: sessionIdSchemaField,
-  project_context: createOptionalProjectContextField("项目上下文，用于判断代码是否符合项目规范"),
+  project_context: createOptionalProjectContextField(
+    "项目上下文，用于判断代码是否符合项目规范",
+  ),
 };
 
 export function registerReviewUiDesign(server: McpServer): void {
@@ -29,7 +33,9 @@ export function registerReviewUiDesign(server: McpServer): void {
     async ({ code, focus_areas, session_id, project_context }) => {
       const contextBlock = buildOptionalProjectContextBlock(project_context);
 
-      const areas = focus_areas ?? "accessibility, design consistency, user experience, mobile responsiveness";
+      const areas =
+        focus_areas ??
+        "accessibility, design consistency, user experience, mobile responsiveness";
 
       const prompt = buildPromptFromLines(
         [
@@ -51,8 +57,10 @@ export function registerReviewUiDesign(server: McpServer): void {
         { keepEmptyLines: true },
       );
 
-      const result = await runGeminiTool("review_ui_design", prompt, { sessionId: session_id });
+      const result = await runGeminiTool("review_ui_design", prompt, {
+        sessionId: session_id,
+      });
       return createSessionAwareToolResult(result);
-    }
+    },
   );
 }

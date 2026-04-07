@@ -9,7 +9,7 @@
 - Phase 3：WorkItem/DAG、runtime/loop、后台恢复、summary/retry/diagnostics/resolution 已完成
 - Phase 4：README / roadmap / 协同文档已更新到当前进度
 
-当前后续工作已转入 `v3.0` Windows 认证自动化与 `v3.1` Linux/macOS 平台验证。下文保留原始分阶段计划，作为实现路径记录。
+当前后续工作已转入 `v3.0` npm 安装分发（Windows 优先）与 `v3.1` Linux/macOS 平台验证。下文保留原始分阶段计划，作为实现路径记录。
 ## Summary
 
 本计划用于把 `gemini-mcp` 从“前端工具集合”升级为“可被 Codex 主 agent 调度的前端规划与执行器”。

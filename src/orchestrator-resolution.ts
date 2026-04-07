@@ -38,7 +38,13 @@ export const getOrchestratorResolutionInputSchema = z.object({
 export const getOrchestratorResolutionOutputSchema = z.object({
   schema_version: z.literal(ORCHESTRATOR_SCHEMA_VERSION),
   orchestrator_id: z.string(),
-  run_status: z.enum(["running", "completed", "failed", "manual-review-required", "invalid-graph"]),
+  run_status: z.enum([
+    "running",
+    "completed",
+    "failed",
+    "manual-review-required",
+    "invalid-graph",
+  ]),
   ready_for_summary: z.boolean(),
   recommended_actions: z.array(recommendedActionSchema),
   manual_actions: z.array(orchestratorManualActionSchema),
@@ -73,11 +79,13 @@ export const applyOrchestratorResolutionInputSchema = z.object({
 export const applyOrchestratorResolutionOutputSchema = z.object({
   schema_version: z.literal(ORCHESTRATOR_SCHEMA_VERSION),
   orchestrator_id: z.string(),
-  applied: z.array(z.object({
-    work_item_id: z.string(),
-    kind: z.enum(["provide-result", "retry-work-item", "mark-failed"]),
-    status: z.literal("applied"),
-  })),
+  applied: z.array(
+    z.object({
+      work_item_id: z.string(),
+      kind: z.enum(["provide-result", "retry-work-item", "mark-failed"]),
+      status: z.literal("applied"),
+    }),
+  ),
   state: orchestratorStateSchema,
   runtime: persistedOrchestratorRuntimeStateSchema.optional(),
   final_summary: orchestratorFinalSummarySchema,
@@ -85,19 +93,32 @@ export const applyOrchestratorResolutionOutputSchema = z.object({
   updated_at: z.string(),
 });
 
-export type GetOrchestratorResolutionInput = z.infer<typeof getOrchestratorResolutionInputSchema>;
-export type GetOrchestratorResolutionOutput = z.infer<typeof getOrchestratorResolutionOutputSchema>;
-export type ApplyOrchestratorResolutionInput = z.infer<typeof applyOrchestratorResolutionInputSchema>;
-export type ApplyOrchestratorResolutionOutput = z.infer<typeof applyOrchestratorResolutionOutputSchema>;
+export type GetOrchestratorResolutionInput = z.infer<
+  typeof getOrchestratorResolutionInputSchema
+>;
+export type GetOrchestratorResolutionOutput = z.infer<
+  typeof getOrchestratorResolutionOutputSchema
+>;
+export type ApplyOrchestratorResolutionInput = z.infer<
+  typeof applyOrchestratorResolutionInputSchema
+>;
+export type ApplyOrchestratorResolutionOutput = z.infer<
+  typeof applyOrchestratorResolutionOutputSchema
+>;
 
 export interface OrchestratorResolutionOptions {
   orchestratorStore?: OrchestratorStore;
   runtimeManager?: Pick<OrchestratorRuntimeManager, "register">;
 }
 
-function requireSnapshot(orchestratorId: string, orchestratorStore?: OrchestratorStore) {
+function requireSnapshot(
+  orchestratorId: string,
+  orchestratorStore?: OrchestratorStore,
+) {
   if (!orchestratorStore) {
-    throw new Error("Orchestrator persistence is unavailable. SQLite orchestrator store is required.");
+    throw new Error(
+      "Orchestrator persistence is unavailable. SQLite orchestrator store is required.",
+    );
   }
 
   const snapshot = orchestratorStore.loadOrchestratorSnapshot(orchestratorId);
@@ -119,14 +140,23 @@ function createRuntimeBase(updatedAt: string) {
   };
 }
 
-function resolveRunStatus(snapshot: ReturnType<typeof requireSnapshot>): GetOrchestratorResolutionOutput["run_status"] {
-  return snapshot.final_summary?.status
-    ?? buildOrchestratorFinalSummary(snapshot, snapshot.updated_at).status;
+function resolveRunStatus(
+  snapshot: ReturnType<typeof requireSnapshot>,
+): GetOrchestratorResolutionOutput["run_status"] {
+  return (
+    snapshot.final_summary?.status ??
+    buildOrchestratorFinalSummary(snapshot, snapshot.updated_at).status
+  );
 }
 
 function buildRecommendedActions(snapshot: ReturnType<typeof requireSnapshot>) {
   const actions: GetOrchestratorResolutionOutput["recommended_actions"] = [];
-  const manualActionMap = new Map((snapshot.runtime?.manual_actions ?? []).map((item) => [item.work_item_id, item]));
+  const manualActionMap = new Map(
+    (snapshot.runtime?.manual_actions ?? []).map((item) => [
+      item.work_item_id,
+      item,
+    ]),
+  );
 
   for (const workItem of snapshot.state.work_items) {
     if (workItem.status === "completed") {
@@ -142,7 +172,8 @@ function buildRecommendedActions(snapshot: ReturnType<typeof requireSnapshot>) {
     if (manualAction) {
       actions.push({
         work_item_id: workItem.id,
-        kind: workItem.owner === "gemini" ? "retry-work-item" : "provide-result",
+        kind:
+          workItem.owner === "gemini" ? "retry-work-item" : "provide-result",
         reason: manualAction.reason,
       });
       continue;
@@ -174,14 +205,21 @@ export function getOrchestratorResolution(
   options: OrchestratorResolutionOptions = {},
 ): GetOrchestratorResolutionOutput {
   const input = getOrchestratorResolutionInputSchema.parse(rawInput);
-  const snapshot = requireSnapshot(input.orchestrator_id, options.orchestratorStore);
-  const finalSummary = snapshot.final_summary ?? buildOrchestratorFinalSummary(snapshot, snapshot.updated_at);
+  const snapshot = requireSnapshot(
+    input.orchestrator_id,
+    options.orchestratorStore,
+  );
+  const finalSummary =
+    snapshot.final_summary ??
+    buildOrchestratorFinalSummary(snapshot, snapshot.updated_at);
 
   return getOrchestratorResolutionOutputSchema.parse({
     schema_version: ORCHESTRATOR_SCHEMA_VERSION,
     orchestrator_id: snapshot.orchestrator_id,
     run_status: resolveRunStatus(snapshot),
-    ready_for_summary: snapshot.state.work_items.every((item) => item.status === "completed" || item.status === "failed"),
+    ready_for_summary: snapshot.state.work_items.every(
+      (item) => item.status === "completed" || item.status === "failed",
+    ),
     recommended_actions: buildRecommendedActions(snapshot),
     manual_actions: snapshot.runtime?.manual_actions ?? [],
     completed_results: snapshot.state.work_item_results,
@@ -190,21 +228,32 @@ export function getOrchestratorResolution(
   });
 }
 
-function clearWorkItemBindings(state: OrchestratorState, workItemId: string): OrchestratorState {
+function clearWorkItemBindings(
+  state: OrchestratorState,
+  workItemId: string,
+): OrchestratorState {
   return orchestratorStateSchema.parse({
     ...state,
-    task_bindings: state.task_bindings.filter((binding) => binding.work_item_id !== workItemId),
+    task_bindings: state.task_bindings.filter(
+      (binding) => binding.work_item_id !== workItemId,
+    ),
     frontend_threads: state.frontend_threads
       .map((thread) => ({
         ...thread,
         work_item_ids: thread.work_item_ids.filter((id) => id !== workItemId),
       }))
       .filter((thread) => thread.work_item_ids.length > 0),
-    work_item_results: state.work_item_results.filter((result) => result.work_item_id !== workItemId),
+    work_item_results: state.work_item_results.filter(
+      (result) => result.work_item_id !== workItemId,
+    ),
   });
 }
 
-function updateRuntimeForRetry(snapshot: ReturnType<typeof requireSnapshot>, workItemId: string, updatedAt: string) {
+function updateRuntimeForRetry(
+  snapshot: ReturnType<typeof requireSnapshot>,
+  workItemId: string,
+  updatedAt: string,
+) {
   const runtime = snapshot.runtime
     ? { ...snapshot.runtime }
     : createRuntimeBase(updatedAt);
@@ -213,18 +262,27 @@ function updateRuntimeForRetry(snapshot: ReturnType<typeof requireSnapshot>, wor
   runtime.active = true;
   runtime.updated_at = updatedAt;
   runtime.last_tick_at = updatedAt;
-  runtime.manual_actions = (runtime.manual_actions ?? []).filter((item) => item.work_item_id !== workItemId);
+  runtime.manual_actions = (runtime.manual_actions ?? []).filter(
+    (item) => item.work_item_id !== workItemId,
+  );
   return persistedOrchestratorRuntimeStateSchema.parse(runtime);
 }
 
-function updateRuntimeForResolution(snapshot: ReturnType<typeof requireSnapshot>, updatedAt: string) {
+function updateRuntimeForResolution(
+  snapshot: ReturnType<typeof requireSnapshot>,
+  updatedAt: string,
+) {
   const runtime = snapshot.runtime
     ? { ...snapshot.runtime }
     : createRuntimeBase(updatedAt);
 
   const hasManualActions = (runtime.manual_actions ?? []).length > 0;
-  const hasFailures = snapshot.state.work_items.some((item) => item.status === "failed");
-  const allTerminal = snapshot.state.work_items.every((item) => item.status === "completed" || item.status === "failed");
+  const hasFailures = snapshot.state.work_items.some(
+    (item) => item.status === "failed",
+  );
+  const allTerminal = snapshot.state.work_items.every(
+    (item) => item.status === "completed" || item.status === "failed",
+  );
 
   if (hasManualActions) {
     runtime.status = "manual-review-required";
@@ -247,7 +305,10 @@ export function applyOrchestratorResolution(
   options: OrchestratorResolutionOptions = {},
 ): ApplyOrchestratorResolutionOutput {
   const input = applyOrchestratorResolutionInputSchema.parse(rawInput);
-  const snapshot = requireSnapshot(input.orchestrator_id, options.orchestratorStore);
+  const snapshot = requireSnapshot(
+    input.orchestrator_id,
+    options.orchestratorStore,
+  );
   const updatedAt = new Date().toISOString();
   let state = snapshot.state;
   let runtime = snapshot.runtime;
@@ -257,25 +318,40 @@ export function applyOrchestratorResolution(
 
   for (const resolution of input.resolutions) {
     if (!state.work_items.some((item) => item.id === resolution.work_item_id)) {
-      throw new Error(`Unknown work item '${resolution.work_item_id}' in orchestrator '${input.orchestrator_id}'.`);
+      throw new Error(
+        `Unknown work item '${resolution.work_item_id}' in orchestrator '${input.orchestrator_id}'.`,
+      );
     }
 
     if (resolution.kind === "provide-result") {
-      state = setWorkItemResult(state, resolution.work_item_id, resolution.result, updatedAt);
-      state = transitionWorkItemStatus(state, resolution.work_item_id, resolution.mark_completed === false ? "working" : "completed");
+      state = setWorkItemResult(
+        state,
+        resolution.work_item_id,
+        resolution.result,
+        updatedAt,
+      );
+      state = transitionWorkItemStatus(
+        state,
+        resolution.work_item_id,
+        resolution.mark_completed === false ? "working" : "completed",
+      );
       if (runtime?.manual_actions) {
         runtime = {
           ...runtime,
-          manual_actions: runtime.manual_actions.filter((item) => item.work_item_id !== resolution.work_item_id),
+          manual_actions: runtime.manual_actions.filter(
+            (item) => item.work_item_id !== resolution.work_item_id,
+          ),
         };
       }
-      events.push(createOrchestratorEvent({
-        level: "info",
-        event_type: "work-item-completed",
-        work_item_id: resolution.work_item_id,
-        ts: updatedAt,
-        message: `Codex provided a result for work item '${resolution.work_item_id}'.`,
-      }));
+      events.push(
+        createOrchestratorEvent({
+          level: "info",
+          event_type: "work-item-completed",
+          work_item_id: resolution.work_item_id,
+          ts: updatedAt,
+          message: `Codex provided a result for work item '${resolution.work_item_id}'.`,
+        }),
+      );
     } else if (resolution.kind === "retry-work-item") {
       state = clearWorkItemBindings(state, resolution.work_item_id);
       state = orchestratorStateSchema.parse({
@@ -286,23 +362,37 @@ export function applyOrchestratorResolution(
             : item;
         }),
       });
-      runtime = updateRuntimeForRetry({ ...snapshot, state, runtime, events }, resolution.work_item_id, updatedAt);
+      runtime = updateRuntimeForRetry(
+        { ...snapshot, state, runtime, events },
+        resolution.work_item_id,
+        updatedAt,
+      );
       reactivatedRuntime = true;
-      events.push(createOrchestratorEvent({
-        level: "warn",
-        event_type: "retry-scheduled",
-        work_item_id: resolution.work_item_id,
-        ts: updatedAt,
-        message: `Manual retry scheduled for work item '${resolution.work_item_id}'.`,
-      }));
+      events.push(
+        createOrchestratorEvent({
+          level: "warn",
+          event_type: "retry-scheduled",
+          work_item_id: resolution.work_item_id,
+          ts: updatedAt,
+          message: `Manual retry scheduled for work item '${resolution.work_item_id}'.`,
+        }),
+      );
     } else {
       state = clearWorkItemBindings(state, resolution.work_item_id);
-      state = transitionWorkItemStatus(state, resolution.work_item_id, "failed");
+      state = transitionWorkItemStatus(
+        state,
+        resolution.work_item_id,
+        "failed",
+      );
       const nextManualActions = [
-        ...((runtime?.manual_actions ?? []).filter((item) => item.work_item_id !== resolution.work_item_id)),
+        ...(runtime?.manual_actions ?? []).filter(
+          (item) => item.work_item_id !== resolution.work_item_id,
+        ),
         {
           work_item_id: resolution.work_item_id,
-          owner: state.work_items.find((item) => item.id === resolution.work_item_id)?.owner ?? "codex",
+          owner:
+            state.work_items.find((item) => item.id === resolution.work_item_id)
+              ?.owner ?? "codex",
           reason: resolution.reason,
           suggested_action: "Run marked failed by Codex resolution.",
           created_at: updatedAt,
@@ -316,13 +406,15 @@ export function applyOrchestratorResolution(
         last_tick_at: updatedAt,
         manual_actions: nextManualActions,
       });
-      events.push(createOrchestratorEvent({
-        level: "error",
-        event_type: "manual-review-required",
-        work_item_id: resolution.work_item_id,
-        ts: updatedAt,
-        message: `Codex marked work item '${resolution.work_item_id}' as failed: ${resolution.reason}`,
-      }));
+      events.push(
+        createOrchestratorEvent({
+          level: "error",
+          event_type: "manual-review-required",
+          work_item_id: resolution.work_item_id,
+          ts: updatedAt,
+          message: `Codex marked work item '${resolution.work_item_id}' as failed: ${resolution.reason}`,
+        }),
+      );
     }
 
     applied.push({
@@ -335,7 +427,10 @@ export function applyOrchestratorResolution(
   const nextSnapshot = orchestratorSnapshotSchema.parse({
     ...snapshot,
     state,
-    runtime: updateRuntimeForResolution({ ...snapshot, state, runtime, events }, updatedAt),
+    runtime: updateRuntimeForResolution(
+      { ...snapshot, state, runtime, events },
+      updatedAt,
+    ),
     events,
     updated_at: updatedAt,
   });

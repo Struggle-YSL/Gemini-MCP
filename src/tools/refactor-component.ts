@@ -13,10 +13,13 @@ import {
 const refactorComponentInputSchema = {
   code: z.string().describe("待重构的组件代码"),
   issues: z.string().describe("问题描述，如 prop drilling, no memoization"),
-  target_pattern: z.string().optional().describe("目标模式，如 compound component"),
+  target_pattern: z
+    .string()
+    .optional()
+    .describe("目标模式，如 compound component"),
   session_id: sessionIdSchemaField,
   project_context: createOptionalProjectContextField(
-    "项目上下文，帮助重构结果与项目风格保持一致"
+    "项目上下文，帮助重构结果与项目风格保持一致",
   ),
 };
 
@@ -50,8 +53,10 @@ export function registerRefactorComponent(server: McpServer): void {
         { keepEmptyLines: true },
       );
 
-      const result = await runGeminiTool("refactor_component", prompt, { sessionId: session_id });
+      const result = await runGeminiTool("refactor_component", prompt, {
+        sessionId: session_id,
+      });
       return createSessionAwareToolResult(result);
-    }
+    },
   );
 }

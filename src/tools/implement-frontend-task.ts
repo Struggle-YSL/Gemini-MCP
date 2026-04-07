@@ -38,7 +38,7 @@ export function getImplementFrontendTaskExecutionOptions(): TaskToolExecutionOpt
 }
 
 function formatRelatedFiles(
-  relatedFiles?: ImplementFrontendTaskInput["related_files"]
+  relatedFiles?: ImplementFrontendTaskInput["related_files"],
 ): string {
   if (!relatedFiles?.length) {
     return "";
@@ -54,7 +54,7 @@ function formatRelatedFiles(
 function buildCompletedPatchResult(
   result: Awaited<ReturnType<typeof runGeminiTool>>,
   patchPackage: FrontendPatchPackage,
-  taskId?: string
+  taskId?: string,
 ) {
   return createStructuredToolResult({
     schema_version: ORCHESTRATOR_SCHEMA_VERSION,
@@ -84,7 +84,10 @@ export async function executeImplementFrontendTask(
 
   const runGemini = dependencies.runGeminiToolFn ?? runGeminiTool;
 
-  await context?.reportProgressStage?.("prompting", "Building Gemini coding prompt");
+  await context?.reportProgressStage?.(
+    "prompting",
+    "Building Gemini coding prompt",
+  );
 
   const normalizedAllowedPaths = validateAllowedPaths(allowed_paths);
   const contextBlock = buildContextSection(project_context as ProjectContext);
@@ -94,7 +97,9 @@ export async function executeImplementFrontendTask(
     contextBlock,
     `Task goal: ${task_goal}`,
     `Allowed paths: ${normalizedAllowedPaths.join(", ")}`,
-    backend_contracts?.length ? `Backend contracts: ${backend_contracts.join(" | ")}` : "",
+    backend_contracts?.length
+      ? `Backend contracts: ${backend_contracts.join(" | ")}`
+      : "",
     acceptance_criteria?.length
       ? `Acceptance criteria: ${acceptance_criteria.join(" | ")}`
       : "",
@@ -111,23 +116,29 @@ export async function executeImplementFrontendTask(
     .filter(Boolean)
     .join("\n");
 
-  await context?.reportProgressStage?.("generating", "Running Gemini for structured patch generation");
+  await context?.reportProgressStage?.(
+    "generating",
+    "Running Gemini for structured patch generation",
+  );
   context?.throwIfAborted?.();
   const result = await runGemini("implement_frontend_task", prompt, {
     sessionId: session_id,
     signal: context?.signal,
   });
 
-  await context?.reportProgressStage?.("packaging", "Validating and packaging Gemini patch output");
+  await context?.reportProgressStage?.(
+    "packaging",
+    "Validating and packaging Gemini patch output",
+  );
   const patchPackage = parseStructuredResult(
     "implement_frontend_task",
     result.text,
-    frontendPatchPackageSchema
+    frontendPatchPackageSchema,
   );
 
   assertPathsWithinAllowList(
     patchPackage.files.map((file) => file.path),
-    normalizedAllowedPaths
+    normalizedAllowedPaths,
   );
 
   return buildCompletedPatchResult(result, patchPackage, context?.taskId);
@@ -140,11 +151,14 @@ export function registerImplementFrontendTask(server: McpServer): void {
     "为 Codex 主 agent 生成结构化前端补丁包，供校验后落盘",
     implementFrontendTaskInputSchema.shape,
     async (args, context) => {
-      return await executeImplementFrontendTask(args as ImplementFrontendTaskInput, context);
+      return await executeImplementFrontendTask(
+        args as ImplementFrontendTaskInput,
+        context,
+      );
     },
     {
       outputSchema: frontendPatchOutputSchema.shape,
       execution: getImplementFrontendTaskExecutionOptions(),
-    }
+    },
   );
 }

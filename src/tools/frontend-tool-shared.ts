@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { buildContextSection, type ProjectContext } from "../context-builder.js";
+import {
+  buildContextSection,
+  type ProjectContext,
+} from "../context-builder.js";
 import { projectContextSchema } from "../orchestrator-tools.js";
 
 export const sessionIdSchemaField = z
@@ -28,6 +31,8 @@ export function buildPromptFromLines(
   }
 
   return lines
-    .filter((line): line is string => typeof line === "string" && line.length > 0)
+    .filter(
+      (line): line is string => typeof line === "string" && line.length > 0,
+    )
     .join("\n");
 }

@@ -43,7 +43,11 @@ test("validateExecutionGraph accepts a valid DAG and returns topological order",
 
   assert.equal(report.ok, true);
   assert.deepEqual(report.issues, []);
-  assert.deepEqual(report.ordered_work_item_ids, ["backend-1", "frontend-1", "integration-1"]);
+  assert.deepEqual(report.ordered_work_item_ids, [
+    "backend-1",
+    "frontend-1",
+    "integration-1",
+  ]);
 });
 
 test("validateExecutionGraph reports missing dependency cycle and owner mismatch", () => {
@@ -70,7 +74,12 @@ test("validateExecutionGraph reports missing dependency cycle and owner mismatch
   assert.equal(report.ok, false);
   assert.deepEqual(
     report.issues.map((issue) => issue.code).sort(),
-    ["cyclic-dependency", "cyclic-dependency", "invalid-owner", "missing-dependency"].sort(),
+    [
+      "cyclic-dependency",
+      "cyclic-dependency",
+      "invalid-owner",
+      "missing-dependency",
+    ].sort(),
   );
 });
 
@@ -102,18 +111,31 @@ test("getReadyWorkItems and transitionWorkItemStatus respect dependency completi
     ],
   };
 
-  assert.deepEqual(getReadyWorkItems(graph).map((item) => item.id), ["frontend-1"]);
+  assert.deepEqual(
+    getReadyWorkItems(graph).map((item) => item.id),
+    ["frontend-1"],
+  );
 
   const state = createOrchestratorState(graph);
   const workingState = transitionWorkItemStatus(state, "frontend-1", "working");
-  const completedState = transitionWorkItemStatus(workingState, "frontend-1", "completed");
+  const completedState = transitionWorkItemStatus(
+    workingState,
+    "frontend-1",
+    "completed",
+  );
 
-  assert.deepEqual(getReadyWorkItems({
-    schema_version: completedState.schema_version,
-    work_items: completedState.work_items,
-  }).map((item) => item.id), ["integration-1"]);
+  assert.deepEqual(
+    getReadyWorkItems({
+      schema_version: completedState.schema_version,
+      work_items: completedState.work_items,
+    }).map((item) => item.id),
+    ["integration-1"],
+  );
 
-  assert.throws(() => transitionWorkItemStatus(state, "integration-1", "working"), /dependency 'frontend-1'/i);
+  assert.throws(
+    () => transitionWorkItemStatus(state, "integration-1", "working"),
+    /dependency 'frontend-1'/i,
+  );
 });
 
 test("bindTaskToWorkItem bindFrontendThread and setWorkItemResult update orchestrator state", () => {
@@ -152,7 +174,10 @@ test("bindTaskToWorkItem bindFrontendThread and setWorkItemResult update orchest
     status: "completed",
   });
 
-  assert.equal(getBoundTaskForWorkItem(resultState, "frontend-code-1")?.task_id, "task-1");
+  assert.equal(
+    getBoundTaskForWorkItem(resultState, "frontend-code-1")?.task_id,
+    "task-1",
+  );
   assert.deepEqual(
     getFrontendThreadForSession(resultState, "session-1")?.work_item_ids,
     ["frontend-plan-1", "frontend-code-1"],

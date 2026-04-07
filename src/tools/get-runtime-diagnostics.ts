@@ -19,7 +19,10 @@ export function registerGetRuntimeDiagnostics(
     "读取当前进程的 Gemini runtime、task execution、orchestrator runtime 和持久化诊断信息",
     getRuntimeDiagnosticsInputSchema.shape,
     async (args) => {
-      const result = getRuntimeDiagnosticsSnapshot(args as GetRuntimeDiagnosticsInput, options);
+      const result = getRuntimeDiagnosticsSnapshot(
+        args as GetRuntimeDiagnosticsInput,
+        options,
+      );
       return createStructuredToolResult(result);
     },
     {

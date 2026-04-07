@@ -47,6 +47,7 @@ test("buildSpawnArgs keeps required baseline arguments when optional fields are 
     timeout: 1000,
   });
 
-  const tail = process.platform === "win32" ? result.args.slice(2) : result.args;
+  const tail =
+    process.platform === "win32" ? result.args.slice(2) : result.args;
   assert.deepEqual(tail, ["-p", "single prompt", "--yolo"]);
 });

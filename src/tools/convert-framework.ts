@@ -3,7 +3,10 @@ import { runGeminiTool } from "../gemini-runner.js";
 import { createSessionAwareToolResult } from "../tool-result.js";
 import { registerOptionalTaskTool } from "../task-tool.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { buildPromptFromLines, sessionIdSchemaField } from "./frontend-tool-shared.js";
+import {
+  buildPromptFromLines,
+  sessionIdSchemaField,
+} from "./frontend-tool-shared.js";
 
 const convertFrameworkInputSchema = {
   code: z.string().describe("待转换的组件代码"),
@@ -20,7 +23,9 @@ export function registerConvertFramework(server: McpServer): void {
     convertFrameworkInputSchema,
     async ({ code, from, to, session_id }) => {
       if (from === to) {
-        throw new Error("`from` and `to` must be different for convert_framework");
+        throw new Error(
+          "`from` and `to` must be different for convert_framework",
+        );
       }
 
       const prompt = buildPromptFromLines(
@@ -41,8 +46,10 @@ export function registerConvertFramework(server: McpServer): void {
         { keepEmptyLines: true },
       );
 
-      const result = await runGeminiTool("convert_framework", prompt, { sessionId: session_id });
+      const result = await runGeminiTool("convert_framework", prompt, {
+        sessionId: session_id,
+      });
       return createSessionAwareToolResult(result);
-    }
+    },
   );
 }

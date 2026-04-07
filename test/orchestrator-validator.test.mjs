@@ -16,7 +16,12 @@ function createWorkspaceRoot(name) {
 
 test("validateFrontendPatchResult reports structural patch issues and stale baselines", () => {
   const workspaceRoot = createWorkspaceRoot("validator");
-  const existingFile = path.join(workspaceRoot, "src", "pages", "VersionList.tsx");
+  const existingFile = path.join(
+    workspaceRoot,
+    "src",
+    "pages",
+    "VersionList.tsx",
+  );
   mkdirSync(path.dirname(existingFile), { recursive: true });
   writeFileSync(existingFile, "current version content", "utf8");
 
@@ -75,7 +80,12 @@ test("validateFrontendPatchResult reports structural patch issues and stale base
 
 test("validateFrontendPatchResult warns when create and update targets do not match workspace state", () => {
   const workspaceRoot = createWorkspaceRoot("validator-targets");
-  const createTarget = path.join(workspaceRoot, "src", "components", "Existing.tsx");
+  const createTarget = path.join(
+    workspaceRoot,
+    "src",
+    "components",
+    "Existing.tsx",
+  );
   mkdirSync(path.dirname(createTarget), { recursive: true });
   writeFileSync(createTarget, "existing file", "utf8");
 

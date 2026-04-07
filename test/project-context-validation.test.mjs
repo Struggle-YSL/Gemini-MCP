@@ -14,7 +14,10 @@ import { createWorkItem } from "../dist/orchestrator-state.js";
 
 function hasProjectContextIssue(result) {
   return result.error.issues.some((issue) => {
-    return issue.message.includes("project_context") && issue.message.includes("design_system");
+    return (
+      issue.message.includes("project_context") &&
+      issue.message.includes("design_system")
+    );
   });
 }
 
@@ -85,14 +88,18 @@ test("implementFrontendTaskInputSchema rejects empty project_context", () => {
 });
 
 test("runOrchestratorGraphInputSchema rejects empty project_context", () => {
-  const result = runOrchestratorGraphInputSchema.safeParse(createMinimalGraphInput({}));
+  const result = runOrchestratorGraphInputSchema.safeParse(
+    createMinimalGraphInput({}),
+  );
 
   assert.equal(result.success, false);
   assert.equal(hasProjectContextIssue(result), true);
 });
 
 test("runOrchestratorLoopInputSchema rejects empty project_context", () => {
-  const result = runOrchestratorLoopInputSchema.safeParse(createMinimalGraphInput({}));
+  const result = runOrchestratorLoopInputSchema.safeParse(
+    createMinimalGraphInput({}),
+  );
 
   assert.equal(result.success, false);
   assert.equal(hasProjectContextIssue(result), true);

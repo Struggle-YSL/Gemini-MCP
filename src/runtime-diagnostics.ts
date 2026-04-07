@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { ORCHESTRATOR_SCHEMA_VERSION } from "./orchestrator-contracts.js";
-import { GEMINI, getRuntimeDiagnostics as getGeminiRuntimeDiagnostics } from "./gemini-runner.js";
+import {
+  GEMINI,
+  getRuntimeDiagnostics as getGeminiRuntimeDiagnostics,
+} from "./gemini-runner.js";
 import type { OrchestratorRuntimeManager } from "./orchestrator-runtime-manager.js";
 import { getProcessTerminationDiagnostics } from "./process-control.js";
 import type { SQLitePersistenceRuntime } from "./sqlite-persistence.js";
@@ -46,7 +49,14 @@ export const getRuntimeDiagnosticsInputSchema = z.object({});
 export const runtimeGeminiDiagnosticsSchema = z.object({
   exec_path: z.string().nullable(),
   global_bin_dir: z.string(),
-  proxy_source: z.enum(["env", "windows-registry", "none"]),
+  searched_paths: z.array(z.string()),
+  proxy_source: z.enum([
+    "env",
+    "windows-registry",
+    "macos-scutil",
+    "linux-gsettings",
+    "none",
+  ]),
   active_sessions: z.number().int().min(0),
 });
 
@@ -157,12 +167,19 @@ export const getRuntimeDiagnosticsOutputSchema = z.object({
   persistence: persistenceDiagnosticsSchema,
 });
 
-export type GetRuntimeDiagnosticsInput = z.infer<typeof getRuntimeDiagnosticsInputSchema>;
-export type GetRuntimeDiagnosticsOutput = z.infer<typeof getRuntimeDiagnosticsOutputSchema>;
+export type GetRuntimeDiagnosticsInput = z.infer<
+  typeof getRuntimeDiagnosticsInputSchema
+>;
+export type GetRuntimeDiagnosticsOutput = z.infer<
+  typeof getRuntimeDiagnosticsOutputSchema
+>;
 
 export interface RuntimeDiagnosticsOptions {
   sqlitePersistence?: SQLitePersistenceRuntime;
-  orchestratorRuntimeManager?: Pick<OrchestratorRuntimeManager, "getDiagnostics">;
+  orchestratorRuntimeManager?: Pick<
+    OrchestratorRuntimeManager,
+    "getDiagnostics"
+  >;
 }
 
 export function getRuntimeDiagnosticsSnapshot(
@@ -178,7 +195,8 @@ export function getRuntimeDiagnosticsSnapshot(
   const taskFailureDiagnostics = getTaskExecutionFailureDiagnostics();
   const taskRecords = listTaskExecutionRecords();
   const schedulerDiagnostics = getTaskExecutionSchedulerDiagnostics();
-  const orchestratorDiagnostics = options.orchestratorRuntimeManager?.getDiagnostics() ?? null;
+  const orchestratorDiagnostics =
+    options.orchestratorRuntimeManager?.getDiagnostics() ?? null;
   const sqlitePersistence = options.sqlitePersistence;
 
   return getRuntimeDiagnosticsOutputSchema.parse({
@@ -187,6 +205,7 @@ export function getRuntimeDiagnosticsSnapshot(
     gemini_runtime: {
       exec_path: GEMINI.execPath,
       global_bin_dir: GEMINI.globalBinDir,
+      searched_paths: GEMINI.searchedPaths,
       proxy_source: geminiDiagnostics.proxySource,
       active_sessions: geminiDiagnostics.activeSessions,
     },
@@ -255,10 +274,14 @@ export function getRuntimeDiagnosticsSnapshot(
       db_path: sqlitePersistence?.dbPath,
       task_store_persistent: Boolean(sqlitePersistence),
       session_store_persistent: Boolean(sqlitePersistence),
-      orchestrator_store_persistent: Boolean(sqlitePersistence?.orchestratorStore),
+      orchestrator_store_persistent: Boolean(
+        sqlitePersistence?.orchestratorStore,
+      ),
       recovery: {
-        interrupted_tasks_recovered: sqlitePersistence?.recovery.interruptedTasksRecovered ?? 0,
-        cleared_queued_messages: sqlitePersistence?.recovery.clearedQueuedMessages ?? 0,
+        interrupted_tasks_recovered:
+          sqlitePersistence?.recovery.interruptedTasksRecovered ?? 0,
+        cleared_queued_messages:
+          sqlitePersistence?.recovery.clearedQueuedMessages ?? 0,
       },
     },
   });

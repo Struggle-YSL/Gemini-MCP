@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -45,20 +47,21 @@ import {
 
 const sqlitePersistence = createSQLitePersistenceRuntime(RUNTIME_CONFIG.dbPath);
 const taskStore = sqlitePersistence?.taskStore ?? new InMemoryTaskStore();
-const taskMessageQueue = sqlitePersistence?.taskMessageQueue ?? new InMemoryTaskMessageQueue();
+const taskMessageQueue =
+  sqlitePersistence?.taskMessageQueue ?? new InMemoryTaskMessageQueue();
 const orchestratorRuntimeManager = sqlitePersistence?.orchestratorStore
   ? new OrchestratorRuntimeManager({
-    orchestratorStore: sqlitePersistence.orchestratorStore,
-    taskStore,
-    geminiTaskSubmitter: createGeminiTaskSubmitter(taskStore),
-    maxActiveRuns: RUNTIME_CONFIG.maxActiveOrchestrators,
-    tickMs: RUNTIME_CONFIG.orchestratorTickMs,
-    maxGeminiRetries: RUNTIME_CONFIG.orchestratorMaxGeminiRetries,
-  })
+      orchestratorStore: sqlitePersistence.orchestratorStore,
+      taskStore,
+      geminiTaskSubmitter: createGeminiTaskSubmitter(taskStore),
+      maxActiveRuns: RUNTIME_CONFIG.maxActiveOrchestrators,
+      tickMs: RUNTIME_CONFIG.orchestratorTickMs,
+      maxGeminiRetries: RUNTIME_CONFIG.orchestratorMaxGeminiRetries,
+    })
   : undefined;
 
 configureGeminiSessionStore(
-  sqlitePersistence?.sessionStore ?? createInMemoryGeminiSessionStore()
+  sqlitePersistence?.sessionStore ?? createInMemoryGeminiSessionStore(),
 );
 
 const server = new McpServer(
@@ -78,7 +81,7 @@ const server = new McpServer(
     },
     taskStore,
     taskMessageQueue,
-  }
+  },
 );
 
 const toolRegistrars: Record<ToolManifestToolName, () => void> = {
@@ -91,33 +94,40 @@ const toolRegistrars: Record<ToolManifestToolName, () => void> = {
   convert_framework: () => registerConvertFramework(server),
   plan_frontend_solution: () => registerPlanFrontendSolution(server),
   implement_frontend_task: () => registerImplementFrontendTask(server),
-  run_orchestrator_graph: () => registerRunOrchestratorGraph(server, {
-    orchestratorStore: sqlitePersistence?.orchestratorStore,
-    taskStore,
-    runtimeManager: orchestratorRuntimeManager,
-  }),
-  run_orchestrator_loop: () => registerRunOrchestratorLoop(server, {
-    orchestratorStore: sqlitePersistence?.orchestratorStore,
-    taskStore,
-    runtimeManager: orchestratorRuntimeManager,
-  }),
-  get_orchestrator_state: () => registerGetOrchestratorState(server, {
-    orchestratorStore: sqlitePersistence?.orchestratorStore,
-  }),
-  get_orchestrator_summary: () => registerGetOrchestratorSummary(server, {
-    orchestratorStore: sqlitePersistence?.orchestratorStore,
-  }),
-  get_runtime_diagnostics: () => registerGetRuntimeDiagnostics(server, {
-    sqlitePersistence: sqlitePersistence ?? undefined,
-    orchestratorRuntimeManager,
-  }),
-  get_orchestrator_resolution: () => registerGetOrchestratorResolution(server, {
-    orchestratorStore: sqlitePersistence?.orchestratorStore,
-  }),
-  apply_orchestrator_resolution: () => registerApplyOrchestratorResolution(server, {
-    orchestratorStore: sqlitePersistence?.orchestratorStore,
-    runtimeManager: orchestratorRuntimeManager,
-  }),
+  run_orchestrator_graph: () =>
+    registerRunOrchestratorGraph(server, {
+      orchestratorStore: sqlitePersistence?.orchestratorStore,
+      taskStore,
+      runtimeManager: orchestratorRuntimeManager,
+    }),
+  run_orchestrator_loop: () =>
+    registerRunOrchestratorLoop(server, {
+      orchestratorStore: sqlitePersistence?.orchestratorStore,
+      taskStore,
+      runtimeManager: orchestratorRuntimeManager,
+    }),
+  get_orchestrator_state: () =>
+    registerGetOrchestratorState(server, {
+      orchestratorStore: sqlitePersistence?.orchestratorStore,
+    }),
+  get_orchestrator_summary: () =>
+    registerGetOrchestratorSummary(server, {
+      orchestratorStore: sqlitePersistence?.orchestratorStore,
+    }),
+  get_runtime_diagnostics: () =>
+    registerGetRuntimeDiagnostics(server, {
+      sqlitePersistence: sqlitePersistence ?? undefined,
+      orchestratorRuntimeManager,
+    }),
+  get_orchestrator_resolution: () =>
+    registerGetOrchestratorResolution(server, {
+      orchestratorStore: sqlitePersistence?.orchestratorStore,
+    }),
+  apply_orchestrator_resolution: () =>
+    registerApplyOrchestratorResolution(server, {
+      orchestratorStore: sqlitePersistence?.orchestratorStore,
+      runtimeManager: orchestratorRuntimeManager,
+    }),
 };
 
 function registerToolsFromManifest(): void {
@@ -126,7 +136,9 @@ function registerToolsFromManifest(): void {
   for (const tool of TOOL_MANIFEST) {
     const register = toolRegistrars[tool.name];
     if (!register) {
-      throw new Error(`Tool '${tool.name}' exists in manifest but has no registrar mapping.`);
+      throw new Error(
+        `Tool '${tool.name}' exists in manifest but has no registrar mapping.`,
+      );
     }
     register();
   }
@@ -134,7 +146,7 @@ function registerToolsFromManifest(): void {
 
 registerToolsFromManifest();
 
-async function main(): Promise<void> {
+export async function startServer(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   orchestratorRuntimeManager?.start();
@@ -152,16 +164,21 @@ async function main(): Promise<void> {
   };
 
   if (!sqlitePersistence) {
-    log("warn", "SQLite persistence unavailable; falling back to in-memory runtime state", {
-      fix: "Run with Node.js >= 22.5 to enable built-in node:sqlite persistence, or set GEMINI_MCP_DB_PATH explicitly.",
-    });
+    log(
+      "warn",
+      "SQLite persistence unavailable; falling back to in-memory runtime state",
+      {
+        fix: "Run with Node.js >= 22.5 to enable built-in node:sqlite persistence, or set GEMINI_MCP_DB_PATH explicitly.",
+      },
+    );
   }
 
   if (sqlitePersistence?.recovery.interruptedTasksRecovered) {
     log("warn", "Recovered interrupted SQLite tasks after restart", {
       persistenceMode,
       dbPath: sqlitePersistence.dbPath,
-      interruptedTasksRecovered: sqlitePersistence.recovery.interruptedTasksRecovered,
+      interruptedTasksRecovered:
+        sqlitePersistence.recovery.interruptedTasksRecovered,
       clearedQueuedMessages: sqlitePersistence.recovery.clearedQueuedMessages,
     });
   }
@@ -173,7 +190,8 @@ async function main(): Promise<void> {
       persistenceMode,
       dbPath: sqlitePersistence?.dbPath,
       activeSessions: diagnostics.activeSessions,
-      recoveredInterruptedTasks: sqlitePersistence?.recovery.interruptedTasksRecovered ?? 0,
+      recoveredInterruptedTasks:
+        sqlitePersistence?.recovery.interruptedTasksRecovered ?? 0,
       orchestratorRuntime: orchestratorDiagnostics,
       runtimeConfig: runtimeConfigSummary,
       registeredToolCount: TOOL_MANIFEST.length,
@@ -181,10 +199,12 @@ async function main(): Promise<void> {
   } else {
     log("warn", "Gemini MCP Server started, but gemini CLI not found", {
       searchedIn: GEMINI.globalBinDir,
+      searchedPaths: GEMINI.searchedPaths,
       fix: "npm install -g @google/gemini-cli && gemini (complete auth)",
       persistenceMode,
       dbPath: sqlitePersistence?.dbPath,
-      recoveredInterruptedTasks: sqlitePersistence?.recovery.interruptedTasksRecovered ?? 0,
+      recoveredInterruptedTasks:
+        sqlitePersistence?.recovery.interruptedTasksRecovered ?? 0,
       orchestratorRuntime: orchestratorDiagnostics,
       runtimeConfig: runtimeConfigSummary,
       registeredToolCount: TOOL_MANIFEST.length,
@@ -192,8 +212,24 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
-  log("error", "Fatal error", { error: String(err) });
-  process.exit(1);
-});
+function isExecutedDirectly(): boolean {
+  const entryArg = process.argv[1];
+  if (!entryArg) {
+    return false;
+  }
 
+  try {
+    return (
+      path.resolve(entryArg) === path.resolve(fileURLToPath(import.meta.url))
+    );
+  } catch {
+    return false;
+  }
+}
+
+if (isExecutedDirectly()) {
+  startServer().catch((err: unknown) => {
+    log("error", "Fatal error", { error: String(err) });
+    process.exit(1);
+  });
+}

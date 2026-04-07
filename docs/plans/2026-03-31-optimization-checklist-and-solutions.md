@@ -1,14 +1,14 @@
 # gemini-mcp 项目优化清单与解决方案
 
 - 文档日期：2026-03-31
-- 最近更新：2026-04-04
+- 最近更新：2026-04-07
 - 适用仓库：`D:\gemini-mcp`
 - 结论来源：基于当前仓库代码、测试、README、AGENTS 扫描结果整理
 - 当前验证状态：
   - `npm run format:check`：通过
   - `npm run lint`：通过
   - `npm run typecheck`：通过
-  - `npm test`：通过（79/79）
+  - `npm test`：通过（92/92）
   - `npm run sync:readme-tools`：通过
   - `npm run check:doc-sync`：通过
 
@@ -116,7 +116,8 @@
 - O11（补齐 lint / format / CI）已完成：
   - 新增 `eslint.config.mjs` 与 `npm run lint` / `npm run lint:fix`（覆盖 `src/test/scripts`）
   - 新增 Prettier 基线：`npm run format` / `npm run format:check`，并引入 `.prettierignore`
-  - 新增 GitHub Actions 工作流 `.github/workflows/ci.yml`，执行 `format:check`、`lint`、`typecheck`、`test`、`check:doc-sync`
+  - 新增 GitHub Actions 工作流 `.github/workflows/ci.yml`，执行 `format:check`、`lint`、`typecheck`、`test`、`check:doc-sync`，并在 `v31-platform-smoke` 矩阵（ubuntu/macos/windows）执行 `check:v31-smoke`
+  - 2026-04-07 已修复 O11 回归：恢复 `package.json` 的 lint/format 脚本、CI quality 门禁（format + lint），并将 `release:check` 收敛为统一质量入口
 - O12（清理根目录样例与回归文件）已完成：
   - 样例组件已迁移至 `examples/components/`（`RecallProbe.tsx`、`StatusBadge.tsx`、`StatusBadge.module.css`）
   - 回归输出快照已迁移至 `test/fixtures/regression/`（`regression-output.json`、`regression-output-extended.json`）
@@ -127,13 +128,13 @@
 - `npm run format:check`：通过
 - `npm run lint`：通过
 - `npm run typecheck`：通过
-- `npm test`：通过（79/79）
+- `npm test`：通过（92/92）
 - `npm run sync:readme-tools`：通过
 - `npm run check:doc-sync`：通过
 
 ### 下一步建议
 
-- O1 收官整理已完成：第二轮与第三轮成果已归档，后续建议转入 v3.0 认证自动化 / v3.1 跨平台验证主线
+- O1 收官整理已完成：第二轮与第三轮成果已归档，后续建议转入 v3.0 npm 安装分发 / v3.1 跨平台验证主线
 
 ## 2. 总体结论
 
@@ -543,7 +544,7 @@
 
 - 新增 `eslint.config.mjs`，并提供 `npm run lint` / `npm run lint:fix`
 - 引入 Prettier，并提供 `npm run format` / `npm run format:check`
-- 新增 `.github/workflows/ci.yml`：`npm ci` + `format:check` + `lint` + `typecheck` + `test` + `check:doc-sync`
+- 新增 `.github/workflows/ci.yml`：`npm ci` + `format:check` + `lint` + `typecheck` + `test` + `check:doc-sync` + `v31-platform-smoke` 矩阵（ubuntu/macos/windows）
 
 #### 预期收益
 
@@ -675,35 +676,9 @@ README 已说明 Node 版本要求，但 `package.json` 中未设置 `engines`
 
 ## 8. 附录：本次扫描中已确认的事实
 
-- 当前测试全部通过：79/79
+- 当前测试全部通过：92/92
 - 项目已具备较完整的 orchestrator/runtime/persistence/diagnostics 能力
 - 当前主要问题不在“功能缺失”，而在“可维护性、可验证性、文档一致性和工程治理”
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

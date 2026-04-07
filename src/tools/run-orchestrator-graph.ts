@@ -33,10 +33,13 @@ export function registerRunOrchestratorGraph(
     "推进主 agent 的 WorkItem DAG 状态，生成下一步 Codex 或 Gemini 动作，但不直接落盘仓库文件",
     runOrchestratorGraphInputSchema.shape,
     async (args) => {
-      const result = await runOrchestratorGraph(args as RunOrchestratorGraphInput, {
-        orchestratorStore: options?.orchestratorStore,
-        taskStore: options?.taskStore,
-      });
+      const result = await runOrchestratorGraph(
+        args as RunOrchestratorGraphInput,
+        {
+          orchestratorStore: options?.orchestratorStore,
+          taskStore: options?.taskStore,
+        },
+      );
       if (result.persisted && result.orchestrator_id) {
         options?.runtimeManager?.register(result.orchestrator_id);
       }
@@ -83,9 +86,12 @@ export function registerGetOrchestratorSummary(
     "读取 orchestrator 的结构化最终汇总、失败补偿状态和 work item 事件轨迹",
     getOrchestratorSummaryInputSchema.shape,
     async (args) => {
-      const result = getOrchestratorSummary(args as GetOrchestratorSummaryInput, {
-        orchestratorStore: options?.orchestratorStore,
-      });
+      const result = getOrchestratorSummary(
+        args as GetOrchestratorSummaryInput,
+        {
+          orchestratorStore: options?.orchestratorStore,
+        },
+      );
       return createStructuredToolResult(result);
     },
     {

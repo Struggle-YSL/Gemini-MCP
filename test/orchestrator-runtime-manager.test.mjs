@@ -16,14 +16,20 @@ const projectContext = {
 };
 
 function createRuntime() {
-  const tempRoot = mkdtempSync(path.join(tmpdir(), "gemini-mcp-orchestrator-manager-"));
+  const tempRoot = mkdtempSync(
+    path.join(tmpdir(), "gemini-mcp-orchestrator-manager-"),
+  );
   const dbPath = path.join(tempRoot, "state.sqlite");
   const runtime = createSQLitePersistenceRuntime(dbPath);
   assert.ok(runtime, "expected SQLite persistence runtime to be available");
   return runtime;
 }
 
-function createQueuedSnapshot(orchestratorId, workItems, readyIds = workItems.map((item) => item.id)) {
+function createQueuedSnapshot(
+  orchestratorId,
+  workItems,
+  readyIds = workItems.map((item) => item.id),
+) {
   return {
     orchestratorId,
     graph: {
@@ -75,14 +81,19 @@ test("OrchestratorRuntimeManager recovers persisted unfinished runs on startup",
           graph: input.graph,
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "completed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "completed",
+            })),
           },
           summary: {
             status: "ok",
             message: "done",
             ready_work_item_ids: [],
             waiting_work_item_ids: [],
-            completed_work_item_ids: input.state.work_items.map((item) => item.id),
+            completed_work_item_ids: input.state.work_items.map(
+              (item) => item.id,
+            ),
             failed_work_item_ids: [],
           },
           context: {
@@ -106,7 +117,10 @@ test("OrchestratorRuntimeManager recovers persisted unfinished runs on startup",
           updated_at: new Date().toISOString(),
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "completed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "completed",
+            })),
           },
           submitted_tasks: [],
           codex_actions: [],
@@ -117,7 +131,9 @@ test("OrchestratorRuntimeManager recovers persisted unfinished runs on startup",
             message: "done",
             ready_work_item_ids: [],
             waiting_work_item_ids: [],
-            completed_work_item_ids: input.state.work_items.map((item) => item.id),
+            completed_work_item_ids: input.state.work_items.map(
+              (item) => item.id,
+            ),
             failed_work_item_ids: [],
           },
         };
@@ -132,7 +148,8 @@ test("OrchestratorRuntimeManager recovers persisted unfinished runs on startup",
   manager.stop();
 
   assert.deepEqual(calls, ["recover-1"]);
-  const snapshot = runtime.orchestratorStore.loadOrchestratorSnapshot("recover-1");
+  const snapshot =
+    runtime.orchestratorStore.loadOrchestratorSnapshot("recover-1");
   assert.equal(snapshot?.runtime?.status, "completed");
   assert.equal(manager.getDiagnostics().recovered_runs, 1);
 });
@@ -175,8 +192,12 @@ test("OrchestratorRuntimeManager keeps gemini branch moving when codex work is a
   await new Promise((resolve) => setTimeout(resolve, 120));
   manager.stop();
 
-  const snapshot = runtime.orchestratorStore.loadOrchestratorSnapshot("mixed-1");
-  assert.equal(snapshot?.state.task_bindings[0]?.work_item_id, "frontend-plan-1");
+  const snapshot =
+    runtime.orchestratorStore.loadOrchestratorSnapshot("mixed-1");
+  assert.equal(
+    snapshot?.state.task_bindings[0]?.work_item_id,
+    "frontend-plan-1",
+  );
   assert.equal(snapshot?.runtime?.status, "running");
 });
 
@@ -212,14 +233,19 @@ test("OrchestratorRuntimeManager enforces maxActiveRuns while draining queued ru
           graph: input.graph,
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "completed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "completed",
+            })),
           },
           summary: {
             status: "ok",
             message: "done",
             ready_work_item_ids: [],
             waiting_work_item_ids: [],
-            completed_work_item_ids: input.state.work_items.map((item) => item.id),
+            completed_work_item_ids: input.state.work_items.map(
+              (item) => item.id,
+            ),
             failed_work_item_ids: [],
           },
           context: {
@@ -243,7 +269,10 @@ test("OrchestratorRuntimeManager enforces maxActiveRuns while draining queued ru
           updated_at: new Date().toISOString(),
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "completed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "completed",
+            })),
           },
           submitted_tasks: [],
           codex_actions: [],
@@ -254,7 +283,9 @@ test("OrchestratorRuntimeManager enforces maxActiveRuns while draining queued ru
             message: "done",
             ready_work_item_ids: [],
             waiting_work_item_ids: [],
-            completed_work_item_ids: input.state.work_items.map((item) => item.id),
+            completed_work_item_ids: input.state.work_items.map(
+              (item) => item.id,
+            ),
             failed_work_item_ids: [],
           },
         };
@@ -271,7 +302,6 @@ test("OrchestratorRuntimeManager enforces maxActiveRuns while draining queued ru
   assert.equal(maxObserved, 1);
   assert.equal(calls.length, 3);
 });
-
 
 test("OrchestratorRuntimeManager manual review captures structured task failure details", async () => {
   const runtime = createRuntime();
@@ -295,18 +325,20 @@ test("OrchestratorRuntimeManager manual review captures structured task failure 
       run: async (input) => {
         const failurePayload = {
           isError: true,
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              status: "failed",
-              progress_stage: "failed",
-              error: {
-                kind: "auth",
-                message: "Gemini auth required",
-                retryable: false,
-              },
-            }),
-          }],
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                status: "failed",
+                progress_stage: "failed",
+                error: {
+                  kind: "auth",
+                  message: "Gemini auth required",
+                  retryable: false,
+                },
+              }),
+            },
+          ],
           structuredContent: {
             status: "failed",
             progress_stage: "failed",
@@ -323,7 +355,10 @@ test("OrchestratorRuntimeManager manual review captures structured task failure 
           graph: input.graph,
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "failed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "failed",
+            })),
             task_bindings: [
               {
                 task_id: "task-frontend-code-1",
@@ -369,7 +404,10 @@ test("OrchestratorRuntimeManager manual review captures structured task failure 
           updated_at: new Date().toISOString(),
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "failed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "failed",
+            })),
             task_bindings: [
               {
                 task_id: "task-frontend-code-1",
@@ -409,9 +447,15 @@ test("OrchestratorRuntimeManager manual review captures structured task failure 
   await new Promise((resolve) => setTimeout(resolve, 200));
   manager.stop();
 
-  const snapshot = runtime.orchestratorStore.loadOrchestratorSnapshot("manual-error-1");
+  const snapshot =
+    runtime.orchestratorStore.loadOrchestratorSnapshot("manual-error-1");
   assert.equal(snapshot?.runtime?.status, "manual-review-required");
-  assert.match(snapshot?.runtime?.manual_actions?.[0]?.reason ?? "", /kind=auth/i);
-  assert.match(snapshot?.runtime?.manual_actions?.[0]?.reason ?? "", /Gemini auth required/i);
+  assert.match(
+    snapshot?.runtime?.manual_actions?.[0]?.reason ?? "",
+    /kind=auth/i,
+  );
+  assert.match(
+    snapshot?.runtime?.manual_actions?.[0]?.reason ?? "",
+    /Gemini auth required/i,
+  );
 });
-

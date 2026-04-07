@@ -55,22 +55,35 @@ test("mergePersistedSnapshotFields merges runtime and keeps existing optional fi
         design_system: "internal ui",
       },
     },
-    events: [{ level: "info", event_type: "run-started", ts: "now", message: "started" }],
+    events: [
+      {
+        level: "info",
+        event_type: "run-started",
+        ts: "now",
+        message: "started",
+      },
+    ],
   };
 
-  const merged = mergePersistedSnapshotFields({
-    orchestratorId: "orchestrator-1",
-    graph: existing.graph,
-    state: existing.state,
-    summary: existing.summary,
-    runtime: {
-      status: "queued",
-      active: true,
-      updated_at: "2026-04-03T01:00:00.000Z",
+  const merged = mergePersistedSnapshotFields(
+    {
+      orchestratorId: "orchestrator-1",
+      graph: existing.graph,
+      state: existing.state,
+      summary: existing.summary,
+      runtime: {
+        status: "queued",
+        active: true,
+        updated_at: "2026-04-03T01:00:00.000Z",
+      },
     },
-  }, existing);
+    existing,
+  );
 
-  assert.equal(merged.mergedContext?.project_context.design_system, "internal ui");
+  assert.equal(
+    merged.mergedContext?.project_context.design_system,
+    "internal ui",
+  );
   assert.equal(merged.mergedRuntime?.status, "queued");
   assert.equal(merged.mergedRuntime?.last_tick_at, "2026-04-03T00:00:00.000Z");
   assert.equal(Array.isArray(merged.mergedEvents), true);

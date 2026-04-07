@@ -20,13 +20,20 @@ import {
   type WorkItemRuntimeInput,
 } from "./orchestrator-runtime-schemas.js";
 
-function readStructuredContent(result: unknown): Record<string, unknown> | undefined {
+function readStructuredContent(
+  result: unknown,
+): Record<string, unknown> | undefined {
   if (!result || typeof result !== "object") {
     return undefined;
   }
 
-  const structuredContent = (result as Partial<CallToolResult>).structuredContent;
-  if (!structuredContent || typeof structuredContent !== "object" || Array.isArray(structuredContent)) {
+  const structuredContent = (result as Partial<CallToolResult>)
+    .structuredContent;
+  if (
+    !structuredContent ||
+    typeof structuredContent !== "object" ||
+    Array.isArray(structuredContent)
+  ) {
     return undefined;
   }
 
@@ -34,7 +41,9 @@ function readStructuredContent(result: unknown): Record<string, unknown> | undef
 }
 
 function readOptionalString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+  return typeof value === "string" && value.trim().length > 0
+    ? value
+    : undefined;
 }
 
 async function loadTaskSnapshotFromStore(
@@ -72,7 +81,9 @@ export async function resolveTaskSnapshots(
   taskStore: TaskStore | undefined,
   autoLoadFromStore: boolean,
 ): Promise<TaskResultSnapshot[]> {
-  const snapshots = new Map((explicitSnapshots ?? []).map((item) => [item.task_id, item]));
+  const snapshots = new Map(
+    (explicitSnapshots ?? []).map((item) => [item.task_id, item]),
+  );
   if (!autoLoadFromStore || !taskStore) {
     return [...snapshots.values()];
   }
@@ -82,7 +93,10 @@ export async function resolveTaskSnapshots(
       continue;
     }
 
-    const snapshot = await loadTaskSnapshotFromStore(taskStore, binding.task_id);
+    const snapshot = await loadTaskSnapshotFromStore(
+      taskStore,
+      binding.task_id,
+    );
     if (snapshot) {
       snapshots.set(binding.task_id, snapshot);
     }
@@ -97,7 +111,9 @@ export function syncStateWithGraph(
 ): OrchestratorState {
   const baseState = state ?? createOrchestratorState(graph);
   const nextWorkItems = graph.work_items.map((graphWorkItem) => {
-    const existing = baseState.work_items.find((item) => item.id === graphWorkItem.id);
+    const existing = baseState.work_items.find(
+      (item) => item.id === graphWorkItem.id,
+    );
     return {
       ...graphWorkItem,
       status: existing?.status ?? graphWorkItem.status,
@@ -118,12 +134,14 @@ export function syncStateWithGraph(
     task_bindings: baseState.task_bindings.filter((binding) => {
       return nextWorkItems.some((item) => item.id === binding.work_item_id);
     }),
-    frontend_threads: baseState.frontend_threads.map((binding) => ({
-      ...binding,
-      work_item_ids: binding.work_item_ids.filter((workItemId) => {
-        return nextWorkItems.some((item) => item.id === workItemId);
-      }),
-    })).filter((binding) => binding.work_item_ids.length > 0),
+    frontend_threads: baseState.frontend_threads
+      .map((binding) => ({
+        ...binding,
+        work_item_ids: binding.work_item_ids.filter((workItemId) => {
+          return nextWorkItems.some((item) => item.id === workItemId);
+        }),
+      }))
+      .filter((binding) => binding.work_item_ids.length > 0),
     work_item_results: baseState.work_item_results.filter((result) => {
       return nextWorkItems.some((item) => item.id === result.work_item_id);
     }),
@@ -134,7 +152,9 @@ export function getRuntimeInput(
   workItem: WorkItem,
   overrides?: Record<string, WorkItemRuntimeInput>,
 ): WorkItemRuntimeInput {
-  const fromState = workItemRuntimeInputSchema.partial().safeParse(workItem.input);
+  const fromState = workItemRuntimeInputSchema
+    .partial()
+    .safeParse(workItem.input);
   const merged = {
     ...(fromState.success ? fromState.data : {}),
     ...(overrides?.[workItem.id] ?? {}),
@@ -206,7 +226,9 @@ export function applyTaskSnapshots(
   taskResults?: TaskResultSnapshot[],
 ): OrchestratorState {
   let nextState = state;
-  const snapshots = new Map((taskResults ?? []).map((item) => [item.task_id, item]));
+  const snapshots = new Map(
+    (taskResults ?? []).map((item) => [item.task_id, item]),
+  );
 
   for (const binding of state.task_bindings) {
     const snapshot = snapshots.get(binding.task_id);
@@ -238,7 +260,11 @@ export function applyTaskSnapshots(
     }
 
     if (snapshot.status === "completed") {
-      nextState = setStatusIfNeeded(nextState, binding.work_item_id, "completed");
+      nextState = setStatusIfNeeded(
+        nextState,
+        binding.work_item_id,
+        "completed",
+      );
       continue;
     }
 
@@ -248,11 +274,15 @@ export function applyTaskSnapshots(
   return nextState;
 }
 
-export function applyStoredResults(state: OrchestratorState): OrchestratorState {
+export function applyStoredResults(
+  state: OrchestratorState,
+): OrchestratorState {
   let nextState = state;
 
   for (const result of state.work_item_results) {
-    const workItem = nextState.work_items.find((item) => item.id === result.work_item_id);
+    const workItem = nextState.work_items.find(
+      (item) => item.id === result.work_item_id,
+    );
     if (!workItem) {
       continue;
     }
@@ -265,6 +295,9 @@ export function applyStoredResults(state: OrchestratorState): OrchestratorState 
   return nextState;
 }
 
-export function getBoundTaskIdForWorkItem(state: OrchestratorState, workItemId: string): string | undefined {
+export function getBoundTaskIdForWorkItem(
+  state: OrchestratorState,
+  workItemId: string,
+): string | undefined {
   return getBoundTaskForWorkItem(state, workItemId)?.task_id;
 }

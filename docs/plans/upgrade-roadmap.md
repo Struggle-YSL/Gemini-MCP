@@ -1,7 +1,7 @@
 # 升级路线图：Gemini CLI MCP Server
 
 > 基准版本：v1.0（Windows 优先，用户需预装 gemini CLI + 完成认证）
-> 最后更新：2026-04-04
+> 最后更新：2026-04-07
 
 ---
 
@@ -17,8 +17,8 @@
 | v2.4 | 可恢复任务与会话持久化 | 高 | **已完成** |
 | v2.5 | 非阻塞前端执行链路 | 高 | **已完成** |
 | v2.6 | 主Agent共享状态模型 | 高 | **已完成** |
-| v3.0 | 认证自动化（Windows） | 中 | 待规划 |
-| v3.1 | Linux / macOS 平台支持 | 低 | 待规划 |
+| v3.0 | npm 安装分发（Windows 优先） | 中 | 进行中（本地三场景模拟通过） |
+| v3.1 | Linux / macOS 平台支持 | 低 | 进行中（首批兼容改造+CI矩阵接入） |
 | v4.0 | 生产级架构（SSE / 缓存 / 多模型路由） | 低 | 待规划 |
 
 ---
@@ -252,45 +252,93 @@
 - O1 第三轮微调三步已完成：命名一致性、dead export 清理、注释/术语统一均已收敛（不改对外协议）
 - O1 第三轮微调第二步已完成：清理内部 dead export（probe runner / OutputFormat / scheduling 内部接口），缩小内部模块暴露面，保持对外协议不变
 - O1 第三轮微调第三步已完成：统一注释/术语（auth preflight / process / resumeSessionId）并同步 README 与 AGENTS，保持对外协议不变
-- O1 收官整理已完成：后续优化进入低优先级维护，主研发重心切换到 v3.0 认证自动化与 v3.1 平台验证
+- O1 收官整理已完成：后续优化进入低优先级维护，主研发重心切换到 v3.0 npm 安装分发与 v3.1 平台验证
 - Gemini 子进程取消/超时已统一为跨平台“两阶段终止 + 强制回收”语义，并带 process-control 诊断统计
 
 ### 下一步
 
 下一阶段重点：
 
-- Windows 认证自动化
+- npm 安装分发（Windows 优先）
 - Linux / macOS 端到端验证与平台兜底
 
 ---
-## v3.0 — 认证自动化（Windows）
+## v3.0 — npm 安装分发（Windows 优先）
 
-**当前**：用户需手动运行 `gemini` 完成 Google OAuth 登录。
+> 2026-04-07：已完成首批落地（npm `bin` 入口 + CLI preflight + README npm 接入模板），并完成三种安装路径的本地模拟验收。
+> 验收清单：`docs/plans/2026-04-07-v3.0-npm-distribution-checklist.md`
 
-**升级方向**：
+**当前**：已新增 npm `bin` 入口，但现网接入中仍有“源码路径 + `node dist/index.js`”惯性，安装与升级流程尚未完全收敛。
 
-- 提供认证状态查询工具
-- 在未认证时给出更直接的登录引导
-- 评估是否能透传 OAuth URL 或复用 Gemini CLI 的内部认证能力
+**升级目标**：将服务升级为可通过 npm 直接安装/调用的标准包形态，优先打通 Windows 的一键接入，再为 v3.1 跨平台验证提供统一分发基础。
 
-候选工具：
+### 实施方案
 
-```typescript
-"gemini_auth_status"  // 返回认证状态 + 登录链接
-"gemini_auth_check"   // 验证 token 是否有效
-```
+1. **包形态标准化**
+   - 增加 npm `bin` 入口（示例：`gemini-mcp`）
+   - 保持 `dist/index.js` 作为运行入口，CLI 仅负责参数转发与启动前检查
+   - 明确 Node 版本约束与启动错误码
+2. **三种安装/运行模式**
+   - `npx -y gemini-mcp`（零安装，推荐给快速试用）
+   - `npm i -g gemini-mcp` 后直接执行 `gemini-mcp`
+   - `npm i -D gemini-mcp` 并通过 `node_modules/.bin/gemini-mcp` 集成到项目
+3. **启动前预检查（preflight）**
+   - 校验 Node 版本、依赖完整性、关键环境变量
+   - 校验 `gemini` CLI 是否可执行；缺失时返回明确安装指引
+   - 保留现有 auth preflight，但定位为“运行保障”而非 v3.0 主目标
+4. **配置与文档迁移**
+   - 将示例 MCP 配置从本地源码路径切换为 npm 命令优先
+   - README 与 `docs/plans` 同步提供 `npx / 全局 / 项目依赖` 三种模板
+5. **发布与回归**
+   - 增加 `npm pack` 冒烟验证与安装后启动校验（`npm run check:npm-package` / `npm run release:check`）
+   - 回归覆盖：Windows clean machine 首次安装、升级、降级、卸载重装
 
+### 验收标准
+
+- 新机器可在 5 分钟内完成安装并启动 MCP 服务
+- 不依赖仓库本地绝对路径即可完成 Codex MCP 配置
+- 安装失败/CLI 缺失/认证缺失均返回明确错误与下一步指引
 ---
 
 ## v3.1 — Linux / macOS 平台支持
 
-**当前**：代码已有平台判断，但主要在 Windows 上验证过。
+> 2026-04-07：已完成首批兼容改造（跨平台路径发现 + Unix 代理兜底 + 单测覆盖），并接入 CI 跨平台冒烟矩阵。
+> 验收清单：`docs/plans/2026-04-07-v3.1-linux-macos-validation-checklist.md`
 
-**后续工作**：
+**当前**：跨平台运行时基础能力已落地，但 Linux / macOS 真实 clean machine 端到端验收尚未补录。
 
-1. 在 Linux/macOS 上端到端测试全部工具
-2. 扩展 `resolveGemini()` 以覆盖非标准安装路径
-3. 补充 Unix 环境下的代理探测策略
+### 已落地内容
+
+1. **跨平台路径发现增强（`resolveGemini`）**
+   - 新增 `gemini-runner-discovery` 模块
+   - 覆盖 `GEMINI_PATH`、PATH、`which/where`、npm/pnpm/yarn 全局 bin
+   - 增补 Linux/macOS 常见目录兜底（含 `/opt/homebrew/bin`）
+2. **Unix 代理探测增强**
+   - 在原有 env + Windows 注册表基础上，补充：
+     - macOS `scutil --proxy`
+     - Linux GNOME `gsettings`
+   - 支持 `ALL_PROXY` 兜底
+3. **可观测性增强**
+   - 运行时诊断新增 `gemini_runtime.searched_paths`
+   - `proxy_source` 扩展支持 `macos-scutil` / `linux-gsettings`
+4. **回归测试补齐**
+   - 新增 `gemini-runner-discovery` 与 `gemini-runner-proxy` 专项单测
+5. **验收自动化脚本**
+   - 新增 `scripts/check-v31-platform-smoke.mjs`（`npm run check:v31-smoke`）用于三场景安装冒烟（npx/全局/项目依赖）
+6. **CI 跨平台矩阵**
+   - `.github/workflows/ci.yml` 新增 `v31-platform-smoke`（ubuntu/macos/windows）
+   - 统一执行 `npm run check:v31-smoke` 并上传 smoke 报告 artifact（避免报告文件被清理）
+
+7. **工程化质量门禁回补**
+   - `package.json` 恢复 `format:check` / `lint` / `lint:fix` 脚本
+   - `quality` job 恢复 `format:check` + `lint` 检查
+   - `release:check` 收敛为统一发布前质量入口（format/lint/typecheck/test/doc/package/smoke）
+
+### 待完成验收
+
+1. Linux clean machine 三场景（npx / 全局 / 项目依赖）
+2. macOS Intel + Apple Silicon 端到端验证
+3. 补录 CI smoke artifact 与真实机验收证据（roadmap/README/checklist）并收口状态
 
 ---
 
@@ -318,20 +366,10 @@ v1.0（已完成）
                           └─► v2.4 可恢复任务与会话持久化
                                 └─► v2.5 非阻塞前端执行链路
                                       └─► v2.6 主Agent共享状态模型
-                                            └─► v3.0 认证自动化
+                                            └─► v3.0 npm 安装分发
                                                   └─► v3.1 Linux/macOS
                                                         └─► v4.0 生产级（有明确需求时）
 ```
-
-
-
-
-
-
-
-
-
-
 
 
 

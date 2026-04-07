@@ -24,7 +24,11 @@ function parseLogLevel(raw: string | undefined): LogLevel | null {
   }
 
   const normalized = raw.trim().toLowerCase();
-  if (normalized === "info" || normalized === "warn" || normalized === "error") {
+  if (
+    normalized === "info" ||
+    normalized === "warn" ||
+    normalized === "error"
+  ) {
     return normalized;
   }
 
@@ -32,11 +36,13 @@ function parseLogLevel(raw: string | undefined): LogLevel | null {
 }
 
 function isNodeTestRuntime(): boolean {
-  return process.execArgv.includes("--test")
-    || process.argv.includes("--test")
-    || process.env.NODE_ENV === "test"
-    || process.env.npm_lifecycle_event === "test"
-    || typeof process.env.NODE_TEST_CONTEXT === "string";
+  return (
+    process.execArgv.includes("--test") ||
+    process.argv.includes("--test") ||
+    process.env.NODE_ENV === "test" ||
+    process.env.npm_lifecycle_event === "test" ||
+    typeof process.env.NODE_TEST_CONTEXT === "string"
+  );
 }
 
 function resolveEffectiveLogLevel(): LogLevel {

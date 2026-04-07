@@ -35,7 +35,11 @@ export function createGeminiPlanAction(
   input: RunOrchestratorGraphInput,
   state: OrchestratorState,
 ): GeminiPlanAction {
-  const sessionId = findReusableSessionId(state, workItem.id, runtimeInput.session_id);
+  const sessionId = findReusableSessionId(
+    state,
+    workItem.id,
+    runtimeInput.session_id,
+  );
 
   return {
     kind: "gemini-plan",
@@ -46,7 +50,8 @@ export function createGeminiPlanAction(
       goal: runtimeInput.goal ?? runtimeInput.task_goal ?? workItem.scope,
       scope: runtimeInput.scope ?? [workItem.scope],
       constraints: runtimeInput.constraints,
-      backend_contracts: runtimeInput.backend_contracts ?? input.backend_contracts,
+      backend_contracts:
+        runtimeInput.backend_contracts ?? input.backend_contracts,
       acceptance_criteria:
         runtimeInput.acceptance_criteria ?? input.acceptance_criteria,
       session_id: sessionId,
@@ -61,7 +66,11 @@ export function createGeminiCodeAction(
   input: RunOrchestratorGraphInput,
   state: OrchestratorState,
 ): GeminiCodeAction {
-  const sessionId = findReusableSessionId(state, workItem.id, runtimeInput.session_id);
+  const sessionId = findReusableSessionId(
+    state,
+    workItem.id,
+    runtimeInput.session_id,
+  );
 
   return {
     kind: "gemini-code",
@@ -72,7 +81,8 @@ export function createGeminiCodeAction(
       task_goal: runtimeInput.task_goal ?? runtimeInput.goal ?? workItem.scope,
       related_files: runtimeInput.related_files,
       allowed_paths: runtimeInput.allowed_paths ?? [],
-      backend_contracts: runtimeInput.backend_contracts ?? input.backend_contracts,
+      backend_contracts:
+        runtimeInput.backend_contracts ?? input.backend_contracts,
       acceptance_criteria:
         runtimeInput.acceptance_criteria ?? input.acceptance_criteria,
       session_id: sessionId,
@@ -81,7 +91,9 @@ export function createGeminiCodeAction(
   };
 }
 
-export function createGraphIssueBlocks(issues: ExecutionGraphIssue[]): BlockedWorkItem[] {
+export function createGraphIssueBlocks(
+  issues: ExecutionGraphIssue[],
+): BlockedWorkItem[] {
   return issues.map((issue) => ({
     work_item_id: issue.work_item_id ?? issue.dependency_id ?? "graph",
     owner: issue.code === "invalid-owner" ? "gemini" : "codex",
@@ -104,11 +116,14 @@ export function createSummary(
     .filter((item) => item.status === "failed")
     .map((item) => item.id);
   const ready = nextActions.map((item) => item.work_item_id);
-  const waiting = [...new Set(blockedWorkItems.map((item) => item.work_item_id))];
+  const waiting = [
+    ...new Set(blockedWorkItems.map((item) => item.work_item_id)),
+  ];
 
-  const message = status === "invalid-graph"
-    ? `Execution graph is invalid: ${validationIssues.length} issue(s) must be resolved before orchestration can advance.`
-    : `Graph advanced: ${ready.length} ready action(s), ${waiting.length} waiting item(s), ${completed.length} completed, ${failed.length} failed.`;
+  const message =
+    status === "invalid-graph"
+      ? `Execution graph is invalid: ${validationIssues.length} issue(s) must be resolved before orchestration can advance.`
+      : `Graph advanced: ${ready.length} ready action(s), ${waiting.length} waiting item(s), ${completed.length} completed, ${failed.length} failed.`;
 
   return {
     status,
@@ -121,5 +136,7 @@ export function createSummary(
 }
 
 export function isTerminalOrchestratorState(state: OrchestratorState): boolean {
-  return state.work_items.every((item) => item.status === "completed" || item.status === "failed");
+  return state.work_items.every(
+    (item) => item.status === "completed" || item.status === "failed",
+  );
 }

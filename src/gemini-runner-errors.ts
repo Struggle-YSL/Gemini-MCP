@@ -28,22 +28,37 @@ export class GeminiCliError extends Error {
 }
 
 export function isAuthFailure(text: string): boolean {
-  return /(sign in|signin|authenticate|authentication|log in|login|google account|oauth)/i.test(text);
+  return /(sign in|signin|authenticate|authentication|log in|login|google account|oauth)/i.test(
+    text,
+  );
 }
 
 function isNetworkFailure(text: string): boolean {
-  return /(proxy|econnreset|enotfound|timed out|timeout|network|socket hang up|tls|certificate)/i.test(text);
+  return /(proxy|econnreset|enotfound|timed out|timeout|network|socket hang up|tls|certificate)/i.test(
+    text,
+  );
 }
 
 function isInvalidSessionFailure(text: string): boolean {
   return /(invalid session identifier|error resuming session)/i.test(text);
 }
 
-export function createMissingCliError(globalBinDir: string): GeminiCliError {
+export function createMissingCliError(searchedPaths: string[]): GeminiCliError {
+  const maxPreview = 5;
+  const previewPaths = searchedPaths.slice(0, maxPreview);
+  const preview =
+    previewPaths.length > 0
+      ? previewPaths.join(", ")
+      : "(no candidate directories found)";
+  const overflow =
+    searchedPaths.length > maxPreview
+      ? ` ... (+${searchedPaths.length - maxPreview} more)`
+      : "";
+
   return new GeminiCliError(
     "missing-cli",
-    `gemini CLI not found in ${globalBinDir}. Please install: npm install -g @google/gemini-cli, then run: gemini (to complete auth)`,
-    false
+    `gemini CLI not found. Searched: ${preview}${overflow}. Install with: npm install -g @google/gemini-cli, then run: gemini (complete auth). You can also set GEMINI_PATH to the executable.`,
+    false,
   );
 }
 
@@ -51,7 +66,7 @@ export function createAuthError(): GeminiCliError {
   return new GeminiCliError(
     "auth",
     "Gemini CLI authentication is required. Run `gemini` in a terminal and complete sign-in, then retry.",
-    false
+    false,
   );
 }
 
@@ -59,7 +74,7 @@ export function createSessionError(sessionId: string): GeminiCliError {
   return new GeminiCliError(
     "session",
     `Unknown session_id: ${sessionId}. Native Gemini session resume failed and there is no usable in-memory fallback for this session.`,
-    false
+    false,
   );
 }
 
@@ -67,59 +82,60 @@ export function createJsonParseError(raw: string): GeminiCliError {
   return new GeminiCliError(
     "unknown-exit",
     `Gemini CLI returned non-JSON output while JSON was expected: ${raw}`,
-    true
+    true,
   );
 }
 
 export function createCancelledError(reason?: unknown): GeminiCliError {
-  const message = reason instanceof Error
-    ? reason.message
-    : typeof reason === "string" && reason
-      ? reason
-      : "Gemini CLI execution was cancelled.";
+  const message =
+    reason instanceof Error
+      ? reason.message
+      : typeof reason === "string" && reason
+        ? reason
+        : "Gemini CLI execution was cancelled.";
 
-  return new GeminiCliError(
-    "cancelled",
-    message,
-    false
-  );
+  return new GeminiCliError("cancelled", message, false);
 }
 
-export function createTimeoutError(timeout: number, proxySource: ProxySource): GeminiCliError {
-  const proxyHint = proxySource === "none"
-    ? " If your network requires a proxy, pass HTTPS_PROXY/HTTP_PROXY to the MCP server process."
-    : "";
+export function createTimeoutError(
+  timeout: number,
+  proxySource: ProxySource,
+): GeminiCliError {
+  const proxyHint =
+    proxySource === "none"
+      ? " If your network requires a proxy, pass HTTPS_PROXY/HTTP_PROXY to the MCP server process."
+      : "";
   return new GeminiCliError(
     "timeout",
     `Gemini CLI timed out after ${timeout}ms.${proxyHint} Consider retrying with a longer timeout.`,
-    true
+    true,
   );
 }
 
-export function createExitError(code: number | null, stdout: string, stderr: string): GeminiCliError {
+export function createExitError(
+  code: number | null,
+  stdout: string,
+  stderr: string,
+): GeminiCliError {
   const combined = `${stderr}\n${stdout}`.trim();
 
   if (isAuthFailure(combined)) {
     return new GeminiCliError(
       "auth",
       "Gemini CLI authentication is required. Run `gemini` in a terminal and complete sign-in, then retry.",
-      false
+      false,
     );
   }
 
   if (isInvalidSessionFailure(combined)) {
-    return new GeminiCliError(
-      "session",
-      combined,
-      false
-    );
+    return new GeminiCliError("session", combined, false);
   }
 
   if (!combined) {
     return new GeminiCliError(
       "unknown-exit",
       `Gemini CLI exited with code ${code} without any stderr/stdout output. Retry the request; if it persists, run gemini manually to inspect the environment.`,
-      true
+      true,
     );
   }
 
@@ -127,14 +143,14 @@ export function createExitError(code: number | null, stdout: string, stderr: str
     return new GeminiCliError(
       "network",
       `Gemini CLI failed with a network-related error: ${combined}`,
-      true
+      true,
     );
   }
 
   return new GeminiCliError(
     "unknown-exit",
     `Gemini CLI exited with code ${code}: ${combined}`,
-    true
+    true,
   );
 }
 
@@ -142,7 +158,7 @@ export function createSpawnError(message: string): GeminiCliError {
   return new GeminiCliError(
     "spawn",
     `Failed to spawn gemini: ${message}`,
-    false
+    false,
   );
 }
 
@@ -159,7 +175,9 @@ export function extractJsonPayload(raw: string): GeminiJsonPayload {
     const lastBrace = text.lastIndexOf("}");
     if (firstBrace >= 0 && lastBrace > firstBrace) {
       try {
-        return JSON.parse(text.slice(firstBrace, lastBrace + 1)) as GeminiJsonPayload;
+        return JSON.parse(
+          text.slice(firstBrace, lastBrace + 1),
+        ) as GeminiJsonPayload;
       } catch {
         // fall through
       }

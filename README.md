@@ -4,30 +4,57 @@
 
 ## 快速开始
 
+### 方式 A：npx 零安装（推荐）
+
+```bash
+npx -y gemini-mcp
+```
+
+### 方式 B：全局安装
+
+```bash
+npm install -g gemini-mcp
+gemini-mcp
+```
+
+### 方式 C：仓库本地开发
+
 ```bash
 npm install
 npm run build
+npm start
 ```
 
 ## Codex 接入配置
 
-在 Codex 配置文件中添加 MCP server（路径根据实际安装位置调整）：
+推荐优先使用 npm 方式，不依赖仓库绝对路径。
 
-**macOS / Linux** (`~/.codex/config.toml`):
+**推荐（npx 零安装）**
+
+```toml
+[mcp_servers.gemini-frontend]
+command = "npx"
+args = ["-y", "gemini-mcp"]
+```
+
+**全局安装后直接启动**
+
+```toml
+[mcp_servers.gemini-frontend]
+command = "gemini-mcp"
+args = []
+```
+
+**项目内依赖（npm i -D gemini-mcp）**
+
 ```toml
 [mcp_servers.gemini-frontend]
 command = "node"
-args = ["/d/gemini-mcp/dist/index.js"]
+args = ["./node_modules/gemini-mcp/dist/cli.js"]
 ```
 
-**Windows** (`%USERPROFILE%\.codex\config.toml`):
-```toml
-[mcp_servers.gemini-frontend]
-command = "node"
-args = ["D:/gemini-mcp/dist/index.js"]
-```
+**开发模式（仓库源码，无需预编译）**
 
-**开发模式（无需预编译）**：
 ```toml
 [mcp_servers.gemini-frontend]
 command = "npx"
@@ -78,6 +105,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 <!-- AUTO-GENERATED:TOOL-MANIFEST:END -->
 
 ### `generate_frontend_component`
+
 生成 React / Vue / HTML 组件。
 
 ```json
@@ -98,6 +126,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `create_styles`
+
 生成 CSS / Tailwind / SCSS 样式。
 
 ```json
@@ -114,6 +143,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `review_ui_design`
+
 审查 UI 代码，给出可访问性和设计改进建议。
 
 ```json
@@ -128,6 +158,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `generate_html_structure`
+
 生成语义化 HTML 页面结构。
 
 ```json
@@ -144,6 +175,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `refactor_component`
+
 重构/优化已有组件代码。
 
 ```json
@@ -161,6 +193,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `generate_storybook_story`
+
 为组件生成 Storybook Story。
 
 ```json
@@ -179,6 +212,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `convert_framework`
+
 框架代码互转（React ↔ Vue）。
 
 ```json
@@ -191,6 +225,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `plan_frontend_solution`
+
 为 Codex 主 agent 生成结构化前端方案片段，不直接生成代码文件。`project_context` 为必填，且 `design_system` / `existing_components` / `conventions` 至少一项为非空字符串。
 
 ```json
@@ -210,6 +245,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `implement_frontend_task`
+
 为 Codex 主 agent 生成结构化前端补丁包，供校验后落盘。`project_context` 和 `allowed_paths` 为必填，且 `design_system` / `existing_components` / `conventions` 至少一项为非空字符串；必须通过 task-augmented 调用使用。
 
 ```json
@@ -234,6 +270,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `run_orchestrator_graph`
+
 推进主 agent 的 WorkItem DAG 状态，生成下一步 Codex 或 Gemini 动作，并可选持久化到 SQLite。`project_context` 为必填，且 `design_system` / `existing_components` / `conventions` 至少一项为非空字符串；当 `load_if_exists=true` 且存在已绑定 `task_id` 时，会优先复用显式 `task_results`，否则自动从当前 MCP `taskStore` 查询任务状态/结果。
 
 ```json
@@ -244,8 +281,26 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
   "graph": {
     "schema_version": "1.0",
     "work_items": [
-      { "id": "backend-1", "type": "backend", "owner": "codex", "scope": "Implement API", "deps": [], "status": "queued", "input": {}, "acceptance": [] },
-      { "id": "frontend-code-1", "type": "frontend-code", "owner": "gemini", "scope": "Build compare drawer", "deps": ["backend-1"], "status": "queued", "input": {}, "acceptance": [] }
+      {
+        "id": "backend-1",
+        "type": "backend",
+        "owner": "codex",
+        "scope": "Implement API",
+        "deps": [],
+        "status": "queued",
+        "input": {},
+        "acceptance": []
+      },
+      {
+        "id": "frontend-code-1",
+        "type": "frontend-code",
+        "owner": "gemini",
+        "scope": "Build compare drawer",
+        "deps": ["backend-1"],
+        "status": "queued",
+        "input": {},
+        "acceptance": []
+      }
     ]
   },
   "project_context": {
@@ -262,8 +317,8 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 }
 ```
 
-
 ### `run_orchestrator_loop`
+
 执行一次 orchestrator loop tick：推进 DAG、自动提交 ready 的 Gemini work item，并返回更新后的编排状态。`project_context` 为必填，且 `design_system` / `existing_components` / `conventions` 至少一项为非空字符串。若本次调用带 `persist=true` 且配置了 SQLite，服务内的后台 runtime 会继续接管并在重启后自动恢复未终态 runs。
 
 ```json
@@ -275,8 +330,26 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
   "graph": {
     "schema_version": "1.0",
     "work_items": [
-      { "id": "backend-1", "type": "backend", "owner": "codex", "scope": "Implement API", "deps": [], "status": "queued", "input": {}, "acceptance": [] },
-      { "id": "frontend-plan-1", "type": "frontend-plan", "owner": "gemini", "scope": "Plan compare drawer", "deps": [], "status": "queued", "input": {}, "acceptance": [] }
+      {
+        "id": "backend-1",
+        "type": "backend",
+        "owner": "codex",
+        "scope": "Implement API",
+        "deps": [],
+        "status": "queued",
+        "input": {},
+        "acceptance": []
+      },
+      {
+        "id": "frontend-plan-1",
+        "type": "frontend-plan",
+        "owner": "gemini",
+        "scope": "Plan compare drawer",
+        "deps": [],
+        "status": "queued",
+        "input": {},
+        "acceptance": []
+      }
     ]
   },
   "project_context": {
@@ -286,7 +359,9 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
   }
 }
 ```
+
 ### `get_orchestrator_state`
+
 读取已持久化的 orchestrator graph/state/summary 快照。`orchestrator_id` 为必填。
 
 ```json
@@ -296,6 +371,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `get_orchestrator_summary`
+
 读取 orchestrator 的结构化最终汇总、失败补偿状态和 work item 事件轨迹（包含 `failure_diagnostics` 错误聚合）。若后台 runtime 已完成自动重试或进入 manual review，可直接用这个工具读取最终结果。
 
 ```json
@@ -305,6 +381,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `get_runtime_diagnostics`
+
 读取当前进程的 Gemini runtime、process-control、task execution、orchestrator runtime 和持久化诊断信息，适合排查队列堆积、后台 run 活跃状态、取消回收结果和 SQLite 恢复情况；task execution 结果中包含失败错误类型聚合（failure diagnostics）。
 
 ```json
@@ -312,6 +389,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `get_orchestrator_resolution`
+
 读取主 agent 可消费的 orchestrator 决策包，包括 recommended actions、manual actions、已完成结果摘要和自然语言 summary。
 
 ```json
@@ -321,6 +399,7 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 ```
 
 ### `apply_orchestrator_resolution`
+
 应用 Codex 对 orchestrator run 的决策，支持 `provide-result`、`retry-work-item` 和 `mark-failed`，必要时会重新激活后台 runtime。
 
 ```json
@@ -429,8 +508,9 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 src/
 ├── index.ts                   # MCP 服务入口
 ├── gemini-runner.ts           # Gemini CLI 运行时入口（组装路径发现、auth preflight、session/retry 与 process 执行）
+├── gemini-runner-discovery.ts # gemini CLI 路径发现（PATH/npm/pnpm/yarn/平台兜底）
 ├── gemini-runner-errors.ts    # Gemini CLI 错误模型、错误归类与 JSON 输出提取
-├── gemini-runner-proxy.ts     # 代理环境解析（env + Windows 注册表）
+├── gemini-runner-proxy.ts     # 代理环境解析（env + Windows 注册表 + macOS scutil + Linux gsettings）
 ├── gemini-runner-session.ts   # session TTL、原生 resume 与回放上下文辅助
 ├── gemini-runner-logging.ts   # runner 结构化日志级别与 sink 配置
 ├── gemini-runner-auth.ts      # runner 认证探测缓存、预检查与 backoff 控制
@@ -493,11 +573,20 @@ src/
 ```bash
 npm run dev                # 开发模式（tsx，无需编译）
 npm run build              # 编译 TypeScript
+npm run format:check       # Prettier 检查
+npm run lint               # ESLint 检查
 npm run sync:readme-tools  # 基于 tool-manifest 自动刷新 README 工具区块
 npm run check:doc-sync     # 校验 README 生成区块与 manifest/工具章节一致
+npm run check:npm-package  # 校验 npm 包布局（bin/shebang/pack 文件清单）
+npm run check:v31-smoke    # v3.1 三场景安装冒烟（当前平台）
+npm run clean:test-tmp     # 清理 test-tmp 临时目录
+npm run pack:dry-run       # 本地模拟打包（不生成发布）
+npm run release:check      # 发布前一键检查（format + lint + typecheck + test + doc sync + npm package + v3.1 smoke）
 npm run typecheck          # 类型检查
 npm run test               # 构建 + Node 内建测试
 ```
+
+CI 会在 `ubuntu-latest` / `macos-latest` / `windows-latest` 执行 `npm run check:v31-smoke` 并上传 smoke 报告 artifact。
 
 ## 故障排查
 
@@ -508,16 +597,18 @@ npm run test               # 构建 + Node 内建测试
 当前版本会按以下顺序为 Gemini 子进程补代理配置：
 
 1. 当前进程里的 `HTTPS_PROXY` / `HTTP_PROXY`
-2. Windows 系统代理注册表（`HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`）
+2. 当前进程里的 `ALL_PROXY`（当 HTTP/HTTPS 未设置时）
+3. Windows 系统代理注册表（`HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`）
+4. macOS `scutil --proxy`
+5. Linux GNOME `gsettings`（`org.gnome.system.proxy`）
 
-如果你使用的是非 Windows 环境，或者 Windows 上使用的是 PAC / 自动代理脚本而不是固定代理地址，仍然建议显式把 `HTTPS_PROXY` 传给 MCP 服务进程。
+若你的 Linux 环境不是 GNOME（或未配置 `gsettings`），建议显式把 `HTTPS_PROXY` 传给 MCP 服务进程。
 
 ## 升级路线
 
 > 正式可追踪文档统一放在 `docs/plans/`，`.claude/plan` 仅作为本地工作目录（若存在）。
 
 见 `docs/plans/upgrade-roadmap.md`
-
 
 ## Codex 主Agent协同模式（v2.6 已落地）
 
@@ -561,7 +652,7 @@ npm run test               # 构建 + Node 内建测试
 
 下一阶段重点已经切换到：
 
-- Windows 认证自动化（v3.0）
+- npm 安装分发（Windows 优先，v3.0）
 - Linux / macOS 端到端验证与平台兜底（v3.1）
 
 ### 设计文档
@@ -572,39 +663,3 @@ npm run test               # 构建 + Node 内建测试
 - `docs/plans/2026-03-20-codex-gemini-orchestrator-implementation-plan.md`
 - `docs/plans/2026-03-20-codex-gemini-tool-schemas.md`
 - `docs/plans/upgrade-roadmap.md`
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

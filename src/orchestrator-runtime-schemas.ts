@@ -55,7 +55,13 @@ export const sessionBindingInputSchema = z.object({
 export const blockedWorkItemSchema = z.object({
   work_item_id: z.string(),
   owner: z.enum(["codex", "gemini"]),
-  category: z.enum(["dependency", "task-running", "missing-input", "graph-invalid", "working"]),
+  category: z.enum([
+    "dependency",
+    "task-running",
+    "missing-input",
+    "graph-invalid",
+    "working",
+  ]),
   reason: z.string(),
 });
 
@@ -88,7 +94,12 @@ export const geminiCodeActionSchema = z.object({
 });
 
 export const executionGraphIssueSchema = z.object({
-  code: z.enum(["duplicate-work-item-id", "missing-dependency", "cyclic-dependency", "invalid-owner"]),
+  code: z.enum([
+    "duplicate-work-item-id",
+    "missing-dependency",
+    "cyclic-dependency",
+    "invalid-owner",
+  ]),
   work_item_id: z.string().optional(),
   dependency_id: z.string().optional(),
   message: z.string(),
@@ -184,10 +195,11 @@ export const submittedTaskSchema = z.object({
   session_id: z.string().optional(),
 });
 
-export const runOrchestratorLoopInputSchema = runOrchestratorGraphInputSchema.extend({
-  auto_submit_gemini: z.boolean().optional(),
-  max_submissions: z.number().int().min(1).optional(),
-});
+export const runOrchestratorLoopInputSchema =
+  runOrchestratorGraphInputSchema.extend({
+    auto_submit_gemini: z.boolean().optional(),
+    max_submissions: z.number().int().min(1).optional(),
+  });
 
 export const runOrchestratorLoopOutputSchema = z.object({
   schema_version: z.literal(ORCHESTRATOR_SCHEMA_VERSION),
@@ -230,19 +242,43 @@ export type BlockedWorkItem = z.infer<typeof blockedWorkItemSchema>;
 export type CodexWorkAction = z.infer<typeof codexWorkActionSchema>;
 export type GeminiPlanAction = z.infer<typeof geminiPlanActionSchema>;
 export type GeminiCodeAction = z.infer<typeof geminiCodeActionSchema>;
-export type OrchestratorNextAction = z.infer<typeof orchestratorNextActionSchema>;
-export type OrchestratorRuntimeSummary = z.infer<typeof orchestratorRuntimeSummarySchema>;
-export type RunOrchestratorGraphInput = z.infer<typeof runOrchestratorGraphInputSchema>;
-export type PersistedOrchestratorContext = z.infer<typeof persistedOrchestratorContextSchema>;
-export type PersistedOrchestratorRuntimeState = z.infer<typeof persistedOrchestratorRuntimeStateSchema>;
-export type RunOrchestratorGraphOutput = z.infer<typeof runOrchestratorGraphOutputSchema>;
-export type GetOrchestratorStateInput = z.infer<typeof getOrchestratorStateInputSchema>;
-export type GetOrchestratorStateOutput = z.infer<typeof getOrchestratorStateOutputSchema>;
-export type GetOrchestratorSummaryInput = z.infer<typeof getOrchestratorSummaryInputSchema>;
-export type GetOrchestratorSummaryOutput = z.infer<typeof getOrchestratorSummaryOutputSchema>;
+export type OrchestratorNextAction = z.infer<
+  typeof orchestratorNextActionSchema
+>;
+export type OrchestratorRuntimeSummary = z.infer<
+  typeof orchestratorRuntimeSummarySchema
+>;
+export type RunOrchestratorGraphInput = z.infer<
+  typeof runOrchestratorGraphInputSchema
+>;
+export type PersistedOrchestratorContext = z.infer<
+  typeof persistedOrchestratorContextSchema
+>;
+export type PersistedOrchestratorRuntimeState = z.infer<
+  typeof persistedOrchestratorRuntimeStateSchema
+>;
+export type RunOrchestratorGraphOutput = z.infer<
+  typeof runOrchestratorGraphOutputSchema
+>;
+export type GetOrchestratorStateInput = z.infer<
+  typeof getOrchestratorStateInputSchema
+>;
+export type GetOrchestratorStateOutput = z.infer<
+  typeof getOrchestratorStateOutputSchema
+>;
+export type GetOrchestratorSummaryInput = z.infer<
+  typeof getOrchestratorSummaryInputSchema
+>;
+export type GetOrchestratorSummaryOutput = z.infer<
+  typeof getOrchestratorSummaryOutputSchema
+>;
 export type SubmittedTask = z.infer<typeof submittedTaskSchema>;
-export type RunOrchestratorLoopInput = z.infer<typeof runOrchestratorLoopInputSchema>;
-export type RunOrchestratorLoopOutput = z.infer<typeof runOrchestratorLoopOutputSchema>;
+export type RunOrchestratorLoopInput = z.infer<
+  typeof runOrchestratorLoopInputSchema
+>;
+export type RunOrchestratorLoopOutput = z.infer<
+  typeof runOrchestratorLoopOutputSchema
+>;
 
 export interface RunOrchestratorGraphOptions {
   orchestratorStore?: OrchestratorStore;

@@ -18,7 +18,9 @@ const projectContext = {
 };
 
 function createRuntime() {
-  const tempRoot = mkdtempSync(path.join(tmpdir(), "gemini-mcp-orchestrator-resolution-"));
+  const tempRoot = mkdtempSync(
+    path.join(tmpdir(), "gemini-mcp-orchestrator-resolution-"),
+  );
   const dbPath = path.join(tempRoot, "state.sqlite");
   const runtime = createSQLitePersistenceRuntime(dbPath);
   assert.ok(runtime, "expected SQLite persistence runtime to be available");
@@ -87,8 +89,19 @@ test("getOrchestratorResolution returns recommended actions for manual-review ru
   );
 
   assert.equal(resolution.run_status, "manual-review-required");
-  assert.ok(resolution.recommended_actions.some((item) => item.work_item_id === "frontend-code-1" && item.kind === "retry-work-item"));
-  assert.ok(resolution.recommended_actions.some((item) => item.work_item_id === "backend-1" && item.kind === "provide-result"));
+  assert.ok(
+    resolution.recommended_actions.some(
+      (item) =>
+        item.work_item_id === "frontend-code-1" &&
+        item.kind === "retry-work-item",
+    ),
+  );
+  assert.ok(
+    resolution.recommended_actions.some(
+      (item) =>
+        item.work_item_id === "backend-1" && item.kind === "provide-result",
+    ),
+  );
 });
 
 test("applyOrchestratorResolution accepts codex result and completes work item", () => {

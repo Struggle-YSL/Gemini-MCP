@@ -25,7 +25,9 @@ export class SQLiteOrchestratorStore implements OrchestratorStore {
       mergedFinalSummary,
     } = mergePersistedSnapshotFields(input, existing);
 
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT INTO orchestrator_snapshots (
         orchestrator_id,
         graph_json,
@@ -47,41 +49,55 @@ export class SQLiteOrchestratorStore implements OrchestratorStore {
         events_json = excluded.events_json,
         final_summary_json = excluded.final_summary_json,
         updated_at = excluded.updated_at
-    `).run(
-      input.orchestratorId,
-      JSON.stringify(input.graph),
-      JSON.stringify(input.state),
-      JSON.stringify(input.summary),
-      mergedContext ? JSON.stringify(mergedContext) : null,
-      mergedRuntime ? JSON.stringify(mergedRuntime) : null,
-      mergedEvents ? JSON.stringify(mergedEvents) : null,
-      mergedFinalSummary ? JSON.stringify(mergedFinalSummary) : null,
-      updatedAt,
-    );
+    `,
+      )
+      .run(
+        input.orchestratorId,
+        JSON.stringify(input.graph),
+        JSON.stringify(input.state),
+        JSON.stringify(input.summary),
+        mergedContext ? JSON.stringify(mergedContext) : null,
+        mergedRuntime ? JSON.stringify(mergedRuntime) : null,
+        mergedEvents ? JSON.stringify(mergedEvents) : null,
+        mergedFinalSummary ? JSON.stringify(mergedFinalSummary) : null,
+        updatedAt,
+      );
   }
 
-  loadOrchestratorSnapshot(orchestratorId: string): OrchestratorSnapshot | null {
-    const row = this.db.prepare(`
+  loadOrchestratorSnapshot(
+    orchestratorId: string,
+  ): OrchestratorSnapshot | null {
+    const row = this.db
+      .prepare(
+        `
       SELECT ${ORCHESTRATOR_SELECT_COLUMNS}
       FROM orchestrator_snapshots
       WHERE orchestrator_id = ?
-    `).get(orchestratorId) as OrchestratorRow | undefined;
+    `,
+      )
+      .get(orchestratorId) as OrchestratorRow | undefined;
 
     return row ? parseOrchestratorRow(row) : null;
   }
 
   listOrchestratorRuns(limit: number = 20): OrchestratorSnapshot[] {
-    const rows = this.db.prepare(`
+    const rows = this.db
+      .prepare(
+        `
       SELECT ${ORCHESTRATOR_SELECT_COLUMNS}
       FROM orchestrator_snapshots
       ORDER BY updated_at DESC
       LIMIT ?
-    `).all(limit) as OrchestratorRow[];
+    `,
+      )
+      .all(limit) as OrchestratorRow[];
 
     return rows.map(parseOrchestratorRow);
   }
 
   listRecoverableOrchestratorRuns(limit: number = 100): OrchestratorSnapshot[] {
-    return this.listOrchestratorRuns(limit).filter(isRecoverableOrchestratorSnapshot);
+    return this.listOrchestratorRuns(limit).filter(
+      isRecoverableOrchestratorSnapshot,
+    );
   }
 }

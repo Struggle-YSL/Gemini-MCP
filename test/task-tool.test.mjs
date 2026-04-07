@@ -73,10 +73,30 @@ test("startTaskCancellationWatcher aborts controller when task becomes cancelled
 });
 
 test("task execution diagnostics track queued running cancel-requested and terminal tasks", () => {
-  registerTaskExecution("diag-queued", "implement_frontend_task", "frontend-implementation", "queued");
-  registerTaskExecution("diag-running", "implement_frontend_task", "frontend-implementation", "running");
-  registerTaskExecution("diag-cancel", "implement_frontend_task", "frontend-implementation", "queued");
-  registerTaskExecution("diag-terminal", "implement_frontend_task", "frontend-implementation", "running");
+  registerTaskExecution(
+    "diag-queued",
+    "implement_frontend_task",
+    "frontend-implementation",
+    "queued",
+  );
+  registerTaskExecution(
+    "diag-running",
+    "implement_frontend_task",
+    "frontend-implementation",
+    "running",
+  );
+  registerTaskExecution(
+    "diag-cancel",
+    "implement_frontend_task",
+    "frontend-implementation",
+    "queued",
+  );
+  registerTaskExecution(
+    "diag-terminal",
+    "implement_frontend_task",
+    "frontend-implementation",
+    "running",
+  );
 
   markTaskExecutionRunning("diag-cancel");
   markTaskExecutionCancellationRequested("diag-cancel");

@@ -1,5 +1,7 @@
-export const README_TOOL_BLOCK_START = "<!-- AUTO-GENERATED:TOOL-MANIFEST:START -->";
-export const README_TOOL_BLOCK_END = "<!-- AUTO-GENERATED:TOOL-MANIFEST:END -->";
+export const README_TOOL_BLOCK_START =
+  "<!-- AUTO-GENERATED:TOOL-MANIFEST:START -->";
+export const README_TOOL_BLOCK_END =
+  "<!-- AUTO-GENERATED:TOOL-MANIFEST:END -->";
 
 const CATEGORY_LABELS = {
   "frontend-base": "低层前端工具",
@@ -20,14 +22,24 @@ function listToolNames(tools) {
 
 export function buildReadmeToolBlock(toolManifest) {
   const byCategory = {
-    "frontend-base": toolManifest.filter((tool) => tool.category === "frontend-base"),
-    "frontend-orchestrator": toolManifest.filter((tool) => tool.category === "frontend-orchestrator"),
+    "frontend-base": toolManifest.filter(
+      (tool) => tool.category === "frontend-base",
+    ),
+    "frontend-orchestrator": toolManifest.filter(
+      (tool) => tool.category === "frontend-orchestrator",
+    ),
     runtime: toolManifest.filter((tool) => tool.category === "runtime"),
   };
 
-  const sessionAwareTools = toolManifest.filter((tool) => tool.supportsSessionId);
-  const requiredProjectContextTools = toolManifest.filter((tool) => tool.requiresProjectContext);
-  const requiredTaskModeTools = toolManifest.filter((tool) => tool.taskSupport === "required");
+  const sessionAwareTools = toolManifest.filter(
+    (tool) => tool.supportsSessionId,
+  );
+  const requiredProjectContextTools = toolManifest.filter(
+    (tool) => tool.requiresProjectContext,
+  );
+  const requiredTaskModeTools = toolManifest.filter(
+    (tool) => tool.taskSupport === "required",
+  );
 
   const rows = toolManifest.map((tool) => {
     const category = CATEGORY_LABELS[tool.category] ?? tool.category;
@@ -69,8 +81,14 @@ export function upsertReadmeToolBlock(readme, block) {
 
   const introIndex = readme.indexOf(TOOL_LIST_INTRO_ANCHOR);
   const firstToolHeadingIndex = readme.indexOf(TOOL_SECTION_FIRST_HEADING);
-  if (introIndex < 0 || firstToolHeadingIndex < 0 || firstToolHeadingIndex <= introIndex) {
-    throw new Error("Could not locate README tool block anchors for first-time insertion.");
+  if (
+    introIndex < 0 ||
+    firstToolHeadingIndex < 0 ||
+    firstToolHeadingIndex <= introIndex
+  ) {
+    throw new Error(
+      "Could not locate README tool block anchors for first-time insertion.",
+    );
   }
 
   const insertPoint = introIndex + TOOL_LIST_INTRO_ANCHOR.length;

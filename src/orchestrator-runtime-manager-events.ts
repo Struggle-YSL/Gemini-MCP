@@ -4,7 +4,10 @@ import type { OrchestratorSnapshot } from "./sqlite-persistence.js";
 
 export function appendWorkItemStatusTransitionEvents(
   snapshot: OrchestratorSnapshot,
-  previousStatusByWorkItemId: ReadonlyMap<string, OrchestratorSnapshot["state"]["work_items"][number]["status"]>,
+  previousStatusByWorkItemId: ReadonlyMap<
+    string,
+    OrchestratorSnapshot["state"]["work_items"][number]["status"]
+  >,
   updatedAt: string,
 ): OrchestratorSnapshot {
   let nextSnapshot = snapshot;

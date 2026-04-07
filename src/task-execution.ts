@@ -63,7 +63,7 @@ function normalizeConcurrencyLimit(limit: number): number {
 
 export function formatTaskProgressStatus(
   stage: TaskProgressStage,
-  detail?: string
+  detail?: string,
 ): string {
   return detail ? `${stage}: ${detail}` : stage;
 }
@@ -87,7 +87,11 @@ export class TaskExecutionScheduler {
     this.drain();
   }
 
-  getStats(): { activeCount: number; pendingCount: number; concurrencyLimit: number } {
+  getStats(): {
+    activeCount: number;
+    pendingCount: number;
+    concurrencyLimit: number;
+  } {
     return {
       activeCount: this.activeCount,
       pendingCount: this.pending.length,
@@ -96,7 +100,10 @@ export class TaskExecutionScheduler {
   }
 
   private drain(): void {
-    while (this.activeCount < this.concurrencyLimit && this.pending.length > 0) {
+    while (
+      this.activeCount < this.concurrencyLimit &&
+      this.pending.length > 0
+    ) {
       const operation = this.pending.shift();
       if (!operation) {
         return;
@@ -151,7 +158,11 @@ export function markTaskExecutionCancellationRequested(taskId: string): void {
     return;
   }
 
-  if (record.state === "completed" || record.state === "failed" || record.state === "cancelled") {
+  if (
+    record.state === "completed" ||
+    record.state === "failed" ||
+    record.state === "cancelled"
+  ) {
     return;
   }
 
@@ -159,7 +170,10 @@ export function markTaskExecutionCancellationRequested(taskId: string): void {
   record.cancellationRequestedAt ??= Date.now();
 }
 
-export function markTaskExecutionFailed(taskId: string, error: StructuredError): void {
+export function markTaskExecutionFailed(
+  taskId: string,
+  error: StructuredError,
+): void {
   const record = executionRecords.get(taskId);
   if (!record) {
     return;
@@ -174,7 +188,7 @@ export function markTaskExecutionFailed(taskId: string, error: StructuredError):
 
 export function markTaskExecutionTerminal(
   taskId: string,
-  state: Extract<TaskExecutionState, "completed" | "failed" | "cancelled">
+  state: Extract<TaskExecutionState, "completed" | "failed" | "cancelled">,
 ): void {
   const record = executionRecords.get(taskId);
   if (!record) {
@@ -276,7 +290,7 @@ export function getTaskExecutionSchedulerDiagnostics(): TaskExecutionSchedulerDi
 
 export function getSharedTaskExecutionScheduler(
   key: string,
-  concurrencyLimit: number
+  concurrencyLimit: number,
 ): TaskExecutionScheduler {
   const normalizedKey = key.trim();
   if (!normalizedKey) {

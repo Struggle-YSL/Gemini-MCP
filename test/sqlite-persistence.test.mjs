@@ -18,7 +18,10 @@ test("createSQLitePersistenceRuntime persists tasks, results, queue messages, an
   const dbPath = createDbPath("sqlite-persistence");
   const runtime = createSQLitePersistenceRuntime(dbPath);
 
-  assert.ok(runtime, "node:sqlite runtime should be available on this Node version");
+  assert.ok(
+    runtime,
+    "node:sqlite runtime should be available on this Node version",
+  );
 
   const task = await runtime.taskStore.createTask(
     { ttl: 60000, pollInterval: 2500 },
@@ -26,7 +29,11 @@ test("createSQLitePersistenceRuntime persists tasks, results, queue messages, an
     { method: "tools/call", params: { name: "implement_frontend_task" } },
   );
 
-  await runtime.taskStore.updateTaskStatus(task.taskId, "working", "generating");
+  await runtime.taskStore.updateTaskStatus(
+    task.taskId,
+    "working",
+    "generating",
+  );
   await runtime.taskMessageQueue.enqueue(task.taskId, {
     kind: "status",
     stage: "packaging",
@@ -55,7 +62,9 @@ test("createSQLitePersistenceRuntime persists tasks, results, queue messages, an
 
   const restoredTask = await reloaded.taskStore.getTask(task.taskId);
   const restoredResult = await reloaded.taskStore.getTaskResult(task.taskId);
-  const restoredMessages = await reloaded.taskMessageQueue.dequeueAll(task.taskId);
+  const restoredMessages = await reloaded.taskMessageQueue.dequeueAll(
+    task.taskId,
+  );
   const restoredSession = reloaded.sessionStore.get("session-1");
 
   assert.deepEqual(reloaded.recovery, {
@@ -94,7 +103,10 @@ test("createSQLitePersistenceRuntime marks interrupted non-terminal tasks as fai
   const dbPath = createDbPath("sqlite-recovery");
   const runtime = createSQLitePersistenceRuntime(dbPath);
 
-  assert.ok(runtime, "node:sqlite runtime should be available on this Node version");
+  assert.ok(
+    runtime,
+    "node:sqlite runtime should be available on this Node version",
+  );
 
   const task = await runtime.taskStore.createTask(
     { ttl: 60000, pollInterval: 2000 },
@@ -102,7 +114,11 @@ test("createSQLitePersistenceRuntime marks interrupted non-terminal tasks as fai
     { method: "tools/call", params: { name: "implement_frontend_task" } },
   );
 
-  await runtime.taskStore.updateTaskStatus(task.taskId, "working", "queued: Waiting for execution slot");
+  await runtime.taskStore.updateTaskStatus(
+    task.taskId,
+    "working",
+    "queued: Waiting for execution slot",
+  );
   await runtime.taskMessageQueue.enqueue(task.taskId, {
     kind: "status",
     stage: "queued",
@@ -112,14 +128,19 @@ test("createSQLitePersistenceRuntime marks interrupted non-terminal tasks as fai
   assert.ok(reloaded, "reloaded sqlite runtime should be available");
 
   const restoredTask = await reloaded.taskStore.getTask(task.taskId);
-  const restoredMessages = await reloaded.taskMessageQueue.dequeueAll(task.taskId);
+  const restoredMessages = await reloaded.taskMessageQueue.dequeueAll(
+    task.taskId,
+  );
 
   assert.deepEqual(reloaded.recovery, {
     interruptedTasksRecovered: 1,
     clearedQueuedMessages: 1,
   });
   assert.equal(restoredTask?.status, "failed");
-  assert.match(restoredTask?.statusMessage ?? "", /server restart before completion/i);
+  assert.match(
+    restoredTask?.statusMessage ?? "",
+    /server restart before completion/i,
+  );
   assert.deepEqual(restoredMessages, []);
   await assert.rejects(() => reloaded.taskStore.getTaskResult(task.taskId));
 });

@@ -16,7 +16,9 @@ const projectContext = {
 };
 
 function createRuntime() {
-  const tempRoot = mkdtempSync(path.join(tmpdir(), "gemini-mcp-orchestrator-summary-"));
+  const tempRoot = mkdtempSync(
+    path.join(tmpdir(), "gemini-mcp-orchestrator-summary-"),
+  );
   const dbPath = path.join(tempRoot, "state.sqlite");
   const runtime = createSQLitePersistenceRuntime(dbPath);
   assert.ok(runtime, "expected SQLite persistence runtime to be available");
@@ -61,7 +63,9 @@ test("OrchestratorRuntimeManager retries failed gemini work and records final su
       scope: "Plan compare drawer",
     }),
   ];
-  runtime.orchestratorStore.saveOrchestratorSnapshot(createQueuedSnapshot("retry-1", workItems));
+  runtime.orchestratorStore.saveOrchestratorSnapshot(
+    createQueuedSnapshot("retry-1", workItems),
+  );
 
   let attempts = 0;
   const manager = new OrchestratorRuntimeManager({
@@ -78,7 +82,10 @@ test("OrchestratorRuntimeManager retries failed gemini work and records final su
             graph: input.graph,
             state: {
               ...input.state,
-              work_items: input.state.work_items.map((item) => ({ ...item, status: "failed" })),
+              work_items: input.state.work_items.map((item) => ({
+                ...item,
+                status: "failed",
+              })),
             },
             summary: {
               status: "ok",
@@ -86,7 +93,9 @@ test("OrchestratorRuntimeManager retries failed gemini work and records final su
               ready_work_item_ids: [],
               waiting_work_item_ids: [],
               completed_work_item_ids: [],
-              failed_work_item_ids: input.state.work_items.map((item) => item.id),
+              failed_work_item_ids: input.state.work_items.map(
+                (item) => item.id,
+              ),
             },
             context: {
               project_context: input.project_context,
@@ -106,7 +115,10 @@ test("OrchestratorRuntimeManager retries failed gemini work and records final su
             updated_at: new Date().toISOString(),
             state: {
               ...input.state,
-              work_items: input.state.work_items.map((item) => ({ ...item, status: "failed" })),
+              work_items: input.state.work_items.map((item) => ({
+                ...item,
+                status: "failed",
+              })),
             },
             submitted_tasks: [],
             codex_actions: [],
@@ -118,7 +130,9 @@ test("OrchestratorRuntimeManager retries failed gemini work and records final su
               ready_work_item_ids: [],
               waiting_work_item_ids: [],
               completed_work_item_ids: [],
-              failed_work_item_ids: input.state.work_items.map((item) => item.id),
+              failed_work_item_ids: input.state.work_items.map(
+                (item) => item.id,
+              ),
             },
           };
         }
@@ -128,14 +142,19 @@ test("OrchestratorRuntimeManager retries failed gemini work and records final su
           graph: input.graph,
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "completed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "completed",
+            })),
           },
           summary: {
             status: "ok",
             message: "completed after retry",
             ready_work_item_ids: [],
             waiting_work_item_ids: [],
-            completed_work_item_ids: input.state.work_items.map((item) => item.id),
+            completed_work_item_ids: input.state.work_items.map(
+              (item) => item.id,
+            ),
             failed_work_item_ids: [],
           },
           context: {
@@ -156,7 +175,10 @@ test("OrchestratorRuntimeManager retries failed gemini work and records final su
           updated_at: new Date().toISOString(),
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "completed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "completed",
+            })),
           },
           submitted_tasks: [],
           codex_actions: [],
@@ -167,7 +189,9 @@ test("OrchestratorRuntimeManager retries failed gemini work and records final su
             message: "completed after retry",
             ready_work_item_ids: [],
             waiting_work_item_ids: [],
-            completed_work_item_ids: input.state.work_items.map((item) => item.id),
+            completed_work_item_ids: input.state.work_items.map(
+              (item) => item.id,
+            ),
             failed_work_item_ids: [],
           },
         };
@@ -186,8 +210,12 @@ test("OrchestratorRuntimeManager retries failed gemini work and records final su
   );
   assert.equal(summary.summary.status, "completed");
   assert.equal(summary.summary.completed_work_items.length, 1);
-  assert.ok(summary.events.some((event) => event.event_type === "retry-scheduled"));
-  assert.ok(summary.events.some((event) => event.event_type === "run-completed"));
+  assert.ok(
+    summary.events.some((event) => event.event_type === "retry-scheduled"),
+  );
+  assert.ok(
+    summary.events.some((event) => event.event_type === "run-completed"),
+  );
 });
 
 test("OrchestratorRuntimeManager escalates repeated gemini failure to manual review summary", async () => {
@@ -200,7 +228,9 @@ test("OrchestratorRuntimeManager escalates repeated gemini failure to manual rev
       scope: "Build compare drawer",
     }),
   ];
-  runtime.orchestratorStore.saveOrchestratorSnapshot(createQueuedSnapshot("manual-1", workItems));
+  runtime.orchestratorStore.saveOrchestratorSnapshot(
+    createQueuedSnapshot("manual-1", workItems),
+  );
 
   let attempts = 0;
   const manager = new OrchestratorRuntimeManager({
@@ -216,7 +246,10 @@ test("OrchestratorRuntimeManager escalates repeated gemini failure to manual rev
           graph: input.graph,
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "failed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "failed",
+            })),
           },
           summary: {
             status: "ok",
@@ -244,7 +277,10 @@ test("OrchestratorRuntimeManager escalates repeated gemini failure to manual rev
           updated_at: new Date().toISOString(),
           state: {
             ...input.state,
-            work_items: input.state.work_items.map((item) => ({ ...item, status: "failed" })),
+            work_items: input.state.work_items.map((item) => ({
+              ...item,
+              status: "failed",
+            })),
           },
           submitted_tasks: [],
           codex_actions: [],
@@ -274,6 +310,10 @@ test("OrchestratorRuntimeManager escalates repeated gemini failure to manual rev
   );
   assert.equal(summary.summary.status, "manual-review-required");
   assert.equal(summary.summary.pending_manual_actions.length, 1);
-  assert.ok(summary.events.some((event) => event.event_type === "manual-review-required"));
+  assert.ok(
+    summary.events.some(
+      (event) => event.event_type === "manual-review-required",
+    ),
+  );
   assert.ok(summary.summary.natural_language_summary.includes("manual action"));
 });

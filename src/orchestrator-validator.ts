@@ -46,7 +46,7 @@ function normalizeWorkspaceRelativePath(input: string): string {
 
 function readWorkspaceFile(
   workspaceRoot: string,
-  relativePath: string
+  relativePath: string,
 ): { exists: boolean; content: string | null } {
   const absolutePath = path.join(workspaceRoot, relativePath);
   if (!existsSync(absolutePath)) {
@@ -60,7 +60,7 @@ function readWorkspaceFile(
 }
 
 function buildRelatedFileMap(
-  relatedFiles?: ImplementFrontendTaskInput["related_files"]
+  relatedFiles?: ImplementFrontendTaskInput["related_files"],
 ): Map<string, string> {
   const map = new Map<string, string>();
 
@@ -74,7 +74,7 @@ function buildRelatedFileMap(
 function collectPatchIssues(
   patch: FrontendPatchOutput,
   options: ValidateFrontendPatchOptions,
-  normalizedAllowedPaths: string[]
+  normalizedAllowedPaths: string[],
 ): PatchValidationIssue[] {
   const workspaceRoot = options.workspaceRoot ?? process.cwd();
   const relatedFileMap = buildRelatedFileMap(options.relatedFiles);
@@ -84,7 +84,7 @@ function collectPatchIssues(
   try {
     assertPathsWithinAllowList(
       patch.files.map((file) => file.path),
-      normalizedAllowedPaths
+      normalizedAllowedPaths,
     );
   } catch (error) {
     issues.push({
@@ -118,7 +118,9 @@ function collectPatchIssues(
     }
 
     const currentFile = readWorkspaceFile(workspaceRoot, normalizedPath);
-    const relatedBaseline = relatedFileMap.get(normalizeWorkspaceRelativePath(normalizedPath));
+    const relatedBaseline = relatedFileMap.get(
+      normalizeWorkspaceRelativePath(normalizedPath),
+    );
 
     if (
       relatedBaseline !== undefined &&
@@ -166,12 +168,16 @@ function collectPatchIssues(
 
 export function validateFrontendPatchResult(
   raw: string | unknown,
-  options: ValidateFrontendPatchOptions
+  options: ValidateFrontendPatchOptions,
 ): FrontendPatchValidationReport {
   const normalizedAllowedPaths = validateAllowedPaths(options.allowedPaths);
   const patch =
     typeof raw === "string"
-      ? parseStructuredResult("frontend_patch_result", raw, frontendPatchOutputSchema)
+      ? parseStructuredResult(
+          "frontend_patch_result",
+          raw,
+          frontendPatchOutputSchema,
+        )
       : frontendPatchOutputSchema.parse(raw);
 
   const issues = collectPatchIssues(patch, options, normalizedAllowedPaths);

@@ -1,7 +1,7 @@
 # 实施计划：Gemini CLI MCP Server（当前状态快照）
 
 > 版本：v1.0 - v2.6 已落地，下一阶段为 v3.0 / v3.1
-> 最后更新：2026-04-04
+> 最后更新：2026-04-07
 
 ---
 
@@ -28,7 +28,16 @@
 - O1 第三轮微调首步已完成：`GeminiAuthController` 方法命名统一为 `markAuthenticated` / `markUnauthenticated` / `ensureAuth`，并同步 runner 调用点，保持行为与外部协议不变
 - O1 第三轮微调第二步已完成：清理 `gemini-runner-auth` / `gemini-runner-process` / `task-tool-scheduling` 的内部死导出，收敛内部 API 暴露面，保持对外协议与行为不变
 - O1 第三轮微调第三步已完成：统一代码/文档术语与注释表述（auth preflight / process / resumeSessionId），并同步 README 与 AGENTS，保持对外协议与行为不变
-- O1 收官整理已完成：已归档 O1 全阶段结果并收敛后续入口，优化主线切换为 v3.0 Windows 认证自动化与 v3.1 Linux/macOS 验证
+- O1 收官整理已完成：已归档 O1 全阶段结果并收敛后续入口，优化主线切换为 v3.0 npm 安装分发（Windows 优先）与 v3.1 Linux/macOS 验证
+- v3.0 首批 npm 安装分发改造已落地：新增 npm bin 入口（gemini-mcp）、CLI preflight（Node 版本与 gemini CLI 可执行性检查）和 README npm 接入模板
+- v3.0 发布前自动化校验已补齐：`npm run check:npm-package`（包布局校验）与 `npm run release:check`（一键回归）
+- v3.0 三种安装路径（npx/全局安装/项目依赖）已完成本地隔离模拟验收；真实 Windows clean machine 验收待补录
+- v3.1 首批跨平台兼容改造已落地：新增 `gemini-runner-discovery`，覆盖 PATH / npm / pnpm / yarn / 平台常见目录的可执行路径探测
+- v3.1 Unix 代理兜底已落地：除 env 与 Windows 注册表外，新增 macOS `scutil --proxy` 与 Linux GNOME `gsettings` 探测
+- v3.1 三场景安装冒烟脚本已落地：`npm run check:v31-smoke`（`scripts/check-v31-platform-smoke.mjs`）
+- v3.1 CI 跨平台矩阵已接入：`ci.yml` 新增 `v31-platform-smoke`（ubuntu/macos/windows）并上传 smoke 报告 artifact
+- v3.1 CI smoke 已改为保留报告文件后上传（不再在 CI 中使用 `--cleanup-temp`）
+- 工程化门禁已回补：`package.json` 恢复 `format:check` / `lint`，`quality` job 恢复 format + lint 检查
 - summary / retry / diagnostics / resolution 闭环
 - Gemini 子进程跨平台“两阶段终止 + 强制回收”语义
 
@@ -77,10 +86,10 @@
 
 ## 当前边界
 
-当前尚未完成的主线工作已经切换到：
+当前尚未完成的主线工作为：
 
-- `v3.0` Windows 认证自动化
-- `v3.1` Linux / macOS 端到端验证与平台兜底
+- `v3.0` 真实 Windows clean machine 验收与发布收口
+- `v3.1` Linux / macOS 真实端到端验收与平台兜底收口
 
 `v2.3` - `v2.6` 的主 agent 编排协议、持久化、非阻塞执行链路和共享状态模型已经形成闭环。
 
@@ -93,13 +102,12 @@
 - `docs/plans/2026-03-20-codex-gemini-orchestrator-design.md`
 - `docs/plans/2026-03-20-codex-gemini-orchestrator-implementation-plan.md`
 - `docs/plans/2026-03-20-codex-gemini-tool-schemas.md`
+
 ## 文档一致性治理（O14）
 
 - README 工具清单区块改为由 `src/tool-manifest.ts` 自动生成（`npm run sync:readme-tools`）。
 - `npm run check:doc-sync` 会校验 README 自动生成区块与 manifest 一致，并校验每个 manifest 工具仍保留详细章节。
 - 变更工具清单、工具约束或 task 支持时，先更新 `src/tool-manifest.ts`，再同步并校验文档。
-
-
 
 
 

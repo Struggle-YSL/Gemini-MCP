@@ -4,24 +4,47 @@
   "description": "Gemini CLI MCP Server - 将 Gemini CLI 封装为 MCP 工具，供 Codex 调用处理前端任务",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "gemini-mcp": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/cli.js",
     "dev": "tsx src/index.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"{src,test,scripts}/**/*.{ts,mjs}\" \"AGENTS.md\" \"docs/plans/**/*.md\" \"package.json\" \".github/workflows/**/*.yml\"",
+    "format:check": "prettier --check \"{src,test,scripts}/**/*.{ts,mjs}\" \"AGENTS.md\" \"docs/plans/**/*.md\" \"package.json\" \".github/workflows/**/*.yml\"",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test",
     "check:doc-sync": "npm run build && node scripts/check-doc-sync.mjs",
-    "sync:readme-tools": "npm run build && node scripts/sync-readme-tools.mjs"
+    "sync:readme-tools": "npm run build && node scripts/sync-readme-tools.mjs",
+    "prepack": "npm run build",
+    "check:npm-package": "npm run build && node scripts/check-npm-package.mjs",
+    "check:v31-smoke": "npm run build && node scripts/check-v31-platform-smoke.mjs",
+    "clean:test-tmp": "node scripts/clean-test-tmp.mjs",
+    "pack:dry-run": "npm pack --dry-run",
+    "release:check": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run check:doc-sync && npm run check:npm-package && npm run check:v31-smoke -- --cleanup-temp"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.13.10",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }

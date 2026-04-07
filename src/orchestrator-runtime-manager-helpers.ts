@@ -1,4 +1,7 @@
-import { extractTaskFailureError, type StructuredError } from "./error-model.js";
+import {
+  extractTaskFailureError,
+  type StructuredError,
+} from "./error-model.js";
 import {
   appendOrchestratorEvent,
   buildOrchestratorFinalSummary,
@@ -7,7 +10,10 @@ import {
   type OrchestratorRetryState,
 } from "./orchestrator-summary.js";
 import type { PersistedOrchestratorRuntimeState } from "./orchestrator-runtime.js";
-import type { OrchestratorSnapshot, OrchestratorStore } from "./sqlite-persistence.js";
+import type {
+  OrchestratorSnapshot,
+  OrchestratorStore,
+} from "./sqlite-persistence.js";
 
 export function nowIso(): string {
   return new Date().toISOString();
@@ -43,18 +49,23 @@ export function createFailedRecoveryState(
   };
 }
 
-export function isTerminalRuntimeStatus(status: PersistedOrchestratorRuntimeState["status"]): boolean {
+export function isTerminalRuntimeStatus(
+  status: PersistedOrchestratorRuntimeState["status"],
+): boolean {
   return (
-    status === "completed"
-    || status === "failed"
-    || status === "invalid-graph"
-    || status === "failed-recovery"
-    || status === "manual-review-required"
+    status === "completed" ||
+    status === "failed" ||
+    status === "invalid-graph" ||
+    status === "failed-recovery" ||
+    status === "manual-review-required"
   );
 }
 
 export function shouldKeepActive(snapshot: OrchestratorSnapshot): boolean {
-  return snapshot.runtime?.active === true && snapshot.runtime.status !== "manual-review-required";
+  return (
+    snapshot.runtime?.active === true &&
+    snapshot.runtime.status !== "manual-review-required"
+  );
 }
 
 export function updateRetryState(
@@ -88,8 +99,13 @@ export function describeFailureError(error: StructuredError): string {
   return `${error.message} [kind=${error.kind}, retryable=${error.retryable}]`;
 }
 
-export function findWorkItemFailureError(snapshot: OrchestratorSnapshot, workItemId: string): StructuredError | undefined {
-  const workItemResult = snapshot.state.work_item_results.find((item) => item.work_item_id === workItemId);
+export function findWorkItemFailureError(
+  snapshot: OrchestratorSnapshot,
+  workItemId: string,
+): StructuredError | undefined {
+  const workItemResult = snapshot.state.work_item_results.find(
+    (item) => item.work_item_id === workItemId,
+  );
   if (!workItemResult) {
     return undefined;
   }
@@ -97,7 +113,10 @@ export function findWorkItemFailureError(snapshot: OrchestratorSnapshot, workIte
   return extractTaskFailureError(workItemResult.payload);
 }
 
-export function resetWorkItemForRetry(snapshot: OrchestratorSnapshot, workItemId: string): OrchestratorSnapshot {
+export function resetWorkItemForRetry(
+  snapshot: OrchestratorSnapshot,
+  workItemId: string,
+): OrchestratorSnapshot {
   return {
     ...snapshot,
     state: {
@@ -105,17 +124,26 @@ export function resetWorkItemForRetry(snapshot: OrchestratorSnapshot, workItemId
       work_items: snapshot.state.work_items.map((item) => {
         return item.id === workItemId ? { ...item, status: "queued" } : item;
       }),
-      task_bindings: snapshot.state.task_bindings.filter((binding) => binding.work_item_id !== workItemId),
-      work_item_results: snapshot.state.work_item_results.filter((result) => result.work_item_id !== workItemId),
+      task_bindings: snapshot.state.task_bindings.filter(
+        (binding) => binding.work_item_id !== workItemId,
+      ),
+      work_item_results: snapshot.state.work_item_results.filter(
+        (result) => result.work_item_id !== workItemId,
+      ),
     },
   };
 }
 
-export function appendMissingTaskEvents(snapshot: OrchestratorSnapshot): OrchestratorEvent[] {
+export function appendMissingTaskEvents(
+  snapshot: OrchestratorSnapshot,
+): OrchestratorEvent[] {
   let events = snapshot.events ?? [];
   for (const binding of snapshot.state.task_bindings) {
     const alreadyRecorded = events.some((event) => {
-      return event.event_type === "task-submitted" && event.data?.task_id === binding.task_id;
+      return (
+        event.event_type === "task-submitted" &&
+        event.data?.task_id === binding.task_id
+      );
     });
     if (alreadyRecorded) {
       continue;
@@ -153,8 +181,10 @@ export function persistSnapshot(
     finalSummary,
     updatedAt,
   });
-  return store.loadOrchestratorSnapshot(snapshot.orchestrator_id) ?? {
-    ...snapshot,
-    final_summary: finalSummary,
-  };
+  return (
+    store.loadOrchestratorSnapshot(snapshot.orchestrator_id) ?? {
+      ...snapshot,
+      final_summary: finalSummary,
+    }
+  );
 }

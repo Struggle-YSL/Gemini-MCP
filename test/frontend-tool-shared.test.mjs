@@ -22,12 +22,7 @@ test("buildPromptFromLines drops non-string and empty lines by default", () => {
 });
 
 test("buildPromptFromLines keeps empty string lines when keepEmptyLines=true", () => {
-  const prompt = buildPromptFromLines([
-    "line-1",
-    "",
-    undefined,
-    "line-2",
-  ], {
+  const prompt = buildPromptFromLines(["line-1", "", undefined, "line-2"], {
     keepEmptyLines: true,
   });
 
@@ -53,6 +48,9 @@ test("shared schema fields validate optional session and optional project contex
 
   const projectContextField = createOptionalProjectContextField("test context");
   assert.equal(projectContextField.safeParse(undefined).success, true);
-  assert.equal(projectContextField.safeParse({ design_system: "internal-ui" }).success, true);
+  assert.equal(
+    projectContextField.safeParse({ design_system: "internal-ui" }).success,
+    true,
+  );
   assert.equal(projectContextField.safeParse(123).success, false);
 });
