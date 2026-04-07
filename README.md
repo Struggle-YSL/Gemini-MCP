@@ -1,23 +1,48 @@
-# Gemini MCP Server
+﻿# gemini-mcp
 
-将 Gemini CLI 封装为 MCP 服务，供 Codex 调用处理前端任务。
+`gemini-mcp` 是一个面向 Codex 主 agent 的 MCP Server。它把 Gemini CLI 封装成可编排、可诊断、可持久化的前端执行层，适合在真实工程里承接页面/组件/样式任务，并把结果以结构化协议返回给主流程。
 
-## 快速开始
+## Why gemini-mcp
 
-### 方式 A：npx 零安装（推荐）
+- 前端任务工具化：覆盖组件生成、样式生成、UI review、框架互转、Storybook 等基础能力。
+- 高层协同能力：提供前端规划和补丁包输出，便于主 agent 做验收与落盘控制。
+- 编排闭环：支持 orchestrator graph/loop、状态查询、决策回填、失败补偿。
+- 任务与并发治理：长任务可走 task 模式，支持排队、取消、阶段进度与并发限制。
+- 持久化兜底：可用 SQLite 持久化 task/session/orchestrator；不可用时自动回退内存模式。
+
+## Core Capabilities
+
+- 16 个 MCP 工具（7 个低层前端工具 + 2 个高层前端工具 + 7 个运行时工具）
+- `session_id` 复用（Gemini 原生会话优先，失败时回放兜底）
+- `project_context` 上下文注入（高层工具强约束）
+- `implement_frontend_task` 强制 task 模式（`taskSupport: required`）
+- orchestrator 状态快照 / summary / resolution / diagnostics
+- SQLite 恢复（服务重启后恢复中断任务与运行态）
+
+## Prerequisites
+
+- Node.js `>= 18`
+- 推荐 Node.js `>= 22.5`（启用 `node:sqlite`；否则自动使用内存模式）
+- Gemini CLI 已安装并完成认证：
+  - `npm install -g @google/gemini-cli`
+  - 首次运行 `gemini`
+
+## Quick Start
+
+### 1) npx（推荐）
 
 ```bash
 npx -y gemini-mcp
 ```
 
-### 方式 B：全局安装
+### 2) 全局安装
 
 ```bash
 npm install -g gemini-mcp
 gemini-mcp
 ```
 
-### 方式 C：仓库本地开发
+### 3) 仓库开发模式
 
 ```bash
 npm install
@@ -25,11 +50,9 @@ npm run build
 npm start
 ```
 
-## Codex 接入配置
+## MCP Config (Codex)
 
-推荐优先使用 npm 方式，不依赖仓库绝对路径。
-
-**推荐（npx 零安装）**
+### npx 零安装
 
 ```toml
 [mcp_servers.gemini-frontend]
@@ -37,7 +60,7 @@ command = "npx"
 args = ["-y", "gemini-mcp"]
 ```
 
-**全局安装后直接启动**
+### 全局安装后直接启动
 
 ```toml
 [mcp_servers.gemini-frontend]
@@ -45,7 +68,7 @@ command = "gemini-mcp"
 args = []
 ```
 
-**项目内依赖（npm i -D gemini-mcp）**
+### 项目内依赖启动
 
 ```toml
 [mcp_servers.gemini-frontend]
@@ -53,26 +76,17 @@ command = "node"
 args = ["./node_modules/gemini-mcp/dist/cli.js"]
 ```
 
-**开发模式（仓库源码，无需预编译）**
+## High-Level Usage Model
 
-```toml
-[mcp_servers.gemini-frontend]
-command = "npx"
-args = ["tsx", "/d/gemini-mcp/src/index.ts"]
-```
+- Codex 主 agent 负责目标拆解、验收标准、结果汇总与最终落盘。
+- Gemini 负责前端规划片段和前端补丁包生成，不直接写仓库文件。
+- 高层前端工具必须传 `project_context`，且至少包含以下任意一项非空字符串：
+  - `design_system`
+  - `existing_components`
+  - `conventions`
+- `implement_frontend_task` 还必须提供 `allowed_paths`，服务端会做路径白名单校验。
 
-## 前置要求
-
-- Node.js >= 18（基础运行要求）
-- Node.js >= 22.5（可启用内置 `node:sqlite` 持久化；低于该版本自动回退内存模式）
-- Gemini CLI 已安装并认证：`npm install -g @google/gemini-cli`
-- 执行 `gemini` 登录认证
-
-## 可用工具
-
-当前共 16 个工具，其中包含 7 个低层前端工具和 9 个面向 Codex 编排的高层工具。`src/tool-manifest.ts` 是工具元数据和注册顺序的单一真源；`npm run sync:readme-tools` 会自动刷新 README 中的工具清单区块，`npm run check:doc-sync` 会校验文档与 manifest 一致性。
-
-其中，直接调用 Gemini CLI 的工具支持可选 `session_id` 复用：`generate_frontend_component`、`create_styles`、`review_ui_design`、`generate_html_structure`、`refactor_component`、`generate_storybook_story`、`convert_framework`、`plan_frontend_solution`、`implement_frontend_task`。
+## Tool Catalog
 
 编排 / 查询 / 诊断类工具本身不接受 `session_id` 参数，但会在内部消费或产出与前端线程绑定相关的信息。编码类和长耗时场景可用 task 模式：
 
@@ -104,562 +118,193 @@ args = ["tsx", "/d/gemini-mcp/src/index.ts"]
 | `apply_orchestrator_resolution` | 编排/运行时工具 | ❌ | ❌ | `optional` |
 <!-- AUTO-GENERATED:TOOL-MANIFEST:END -->
 
+## Tool Reference
+
 ### `generate_frontend_component`
 
-生成 React / Vue / HTML 组件。
+生成 React / Vue / HTML 组件代码，适用于新组件草稿和快速原型。
 
-```json
-{
-  "component_name": "UserProfileCard",
-  "framework": "react",
-  "description": "显示用户头像、姓名、角色标签，支持加载状态",
-  "props": "user: { name: string, avatar: string, role: string }, loading?: boolean",
-  "style_preference": "Tailwind CSS",
-  "session_id": "optional-session-id",
-  "project_context": {
-    "design_system": "shadcn/ui",
-    "existing_components": "Avatar, Badge, Card, Skeleton",
-    "color_tokens": "--primary: hsl(222.2 47.4% 11.2%)",
-    "conventions": "使用 cn() 合并 className; 所有组件为 TypeScript"
-  }
-}
-```
+关键入参：`component_name`、`framework`、`description`，可选 `props`、`style_preference`、`session_id`、`project_context`。
 
 ### `create_styles`
 
-生成 CSS / Tailwind / SCSS 样式。
+生成 CSS / Tailwind / SCSS 样式代码，支持响应式约束和设计令牌输入。
 
-```json
-{
-  "element_description": "主导航栏，固定顶部，毛玻璃背景效果",
-  "style_type": "css",
-  "responsive": true,
-  "session_id": "optional-session-id",
-  "project_context": {
-    "color_tokens": "--bg: #fff; --border: #e5e7eb",
-    "breakpoints": "sm:640px md:768px lg:1024px"
-  }
-}
-```
+关键入参：`element_description`、`style_type`，可选 `design_tokens`、`responsive`、`session_id`、`project_context`。
 
 ### `review_ui_design`
 
-审查 UI 代码，给出可访问性和设计改进建议。
+审查 HTML/CSS/JSX/Vue 代码，输出问题列表、修复建议和总体评分。
 
-```json
-{
-  "code": "<button onclick='submit()'>提交</button>",
-  "focus_areas": "accessibility, semantic-html",
-  "session_id": "optional-session-id",
-  "project_context": {
-    "design_system": "Ant Design 5.x"
-  }
-}
-```
+关键入参：`code`，可选 `focus_areas`、`session_id`、`project_context`。
 
 ### `generate_html_structure`
 
-生成语义化 HTML 页面结构。
+生成语义化页面结构（header/main/section/footer 等），用于页面骨架搭建。
 
-```json
-{
-  "page_description": "SaaS 产品落地页，主打 AI 代码生成功能",
-  "sections": ["header", "hero", "features", "pricing", "faq", "footer"],
-  "semantic_html": true,
-  "session_id": "optional-session-id",
-  "project_context": {
-    "design_system": "自定义营销站点",
-    "conventions": "使用 BEM 风格 className"
-  }
-}
-```
+关键入参：`page_description`、`sections`，可选 `semantic_html`、`session_id`、`project_context`。
 
 ### `refactor_component`
 
-重构/优化已有组件代码。
+对已有组件做结构与可维护性重构，默认尽量保持行为不变。
 
-```json
-{
-  "code": "export function UserCard() { return <div />; }",
-  "issues": "prop drilling, loading state is duplicated, markup lacks accessibility labels",
-  "target_pattern": "compound component",
-  "session_id": "optional-session-id",
-  "project_context": {
-    "design_system": "shadcn/ui",
-    "existing_components": "Card, Avatar, Skeleton",
-    "conventions": "React + TypeScript; use cn() for className"
-  }
-}
-```
+关键入参：`code`、`issues`，可选 `target_pattern`、`session_id`、`project_context`。
 
 ### `generate_storybook_story`
 
-为组件生成 Storybook Story。
+基于组件代码生成 Storybook Story（CSF + TypeScript），用于可视回归与交互校验。
 
-```json
-{
-  "component_code": "export function Button(props: ButtonProps) { return <button {...props} />; }",
-  "component_name": "Button",
-  "stories": ["Default", "Loading", "Disabled"],
-  "storybook_version": "8",
-  "session_id": "optional-session-id",
-  "project_context": {
-    "design_system": "internal-ui",
-    "existing_components": "Button, Spinner",
-    "conventions": "Storybook CSF3 + TypeScript"
-  }
-}
-```
+关键入参：`component_code`、`component_name`、`stories`，可选 `storybook_version`、`session_id`、`project_context`。
 
 ### `convert_framework`
 
-框架代码互转（React ↔ Vue）。
+在 React 和 Vue 之间转换组件代码（要求 `from` 与 `to` 不同）。
 
-```json
-{
-  "code": "export function Counter() { const [count, setCount] = useState(0); return <button onClick={() => setCount(count + 1)}>{count}</button>; }",
-  "from": "react",
-  "to": "vue",
-  "session_id": "optional-session-id"
-}
-```
+关键入参：`code`、`from`、`to`，可选 `session_id`。
 
 ### `plan_frontend_solution`
 
-为 Codex 主 agent 生成结构化前端方案片段，不直接生成代码文件。`project_context` 为必填，且 `design_system` / `existing_components` / `conventions` 至少一项为非空字符串。
+生成结构化前端方案片段，不直接产出落盘文件。适合计划阶段与方案评审。
 
-```json
-{
-  "goal": "为低代码页面编辑器新增版本对比侧边栏",
-  "scope": ["react page", "sidebar", "status badge", "responsive layout"],
-  "constraints": ["必须兼容现有设计系统", "不能改动后端接口"],
-  "backend_contracts": ["GET /api/version/{id}", "GET /api/version/{id}/diff"],
-  "acceptance_criteria": ["支持桌面端和移动端", "状态标签需要区分版本状态"],
-  "session_id": "optional-session-id",
-  "project_context": {
-    "design_system": "internal admin ui",
-    "existing_components": "Card, Badge, Drawer, Table",
-    "conventions": "React + TypeScript; use cn() for className"
-  }
-}
-```
+关键入参：`goal`、`scope`、`project_context`，可选 `constraints`、`backend_contracts`、`acceptance_criteria`、`session_id`。
 
 ### `implement_frontend_task`
 
-为 Codex 主 agent 生成结构化前端补丁包，供校验后落盘。`project_context` 和 `allowed_paths` 为必填，且 `design_system` / `existing_components` / `conventions` 至少一项为非空字符串；必须通过 task-augmented 调用使用。
+生成结构化前端补丁包（`files[]` + 校验步骤 + 风险），供 Codex 校验后落盘。该工具必须以 task 模式调用。
 
-```json
-{
-  "task_goal": "新增版本对比侧边栏并接入状态标签",
-  "related_files": [
-    {
-      "path": "src/pages/version/VersionList.tsx",
-      "content": "export function VersionList() {}"
-    }
-  ],
-  "allowed_paths": ["src/pages/**", "src/components/**"],
-  "backend_contracts": ["GET /api/version/{id}", "GET /api/version/{id}/diff"],
-  "acceptance_criteria": ["移动端自动折叠", "状态标签区分已发布和草稿"],
-  "session_id": "optional-session-id",
-  "project_context": {
-    "design_system": "internal admin ui",
-    "existing_components": "Card, Badge, Drawer, Table",
-    "conventions": "React + TypeScript; use cn() for className"
-  }
-}
-```
+关键入参：`task_goal`、`allowed_paths`、`project_context`，可选 `related_files`、`backend_contracts`、`acceptance_criteria`、`session_id`。
 
 ### `run_orchestrator_graph`
 
-推进主 agent 的 WorkItem DAG 状态，生成下一步 Codex 或 Gemini 动作，并可选持久化到 SQLite。`project_context` 为必填，且 `design_system` / `existing_components` / `conventions` 至少一项为非空字符串；当 `load_if_exists=true` 且存在已绑定 `task_id` 时，会优先复用显式 `task_results`，否则自动从当前 MCP `taskStore` 查询任务状态/结果。
+单步推进 WorkItem DAG，生成下一步动作（Codex action / Gemini action），可选持久化快照。
 
-```json
-{
-  "orchestrator_id": "version-compare-001",
-  "persist": true,
-  "load_if_exists": true,
-  "graph": {
-    "schema_version": "1.0",
-    "work_items": [
-      {
-        "id": "backend-1",
-        "type": "backend",
-        "owner": "codex",
-        "scope": "Implement API",
-        "deps": [],
-        "status": "queued",
-        "input": {},
-        "acceptance": []
-      },
-      {
-        "id": "frontend-code-1",
-        "type": "frontend-code",
-        "owner": "gemini",
-        "scope": "Build compare drawer",
-        "deps": ["backend-1"],
-        "status": "queued",
-        "input": {},
-        "acceptance": []
-      }
-    ]
-  },
-  "project_context": {
-    "design_system": "internal admin ui",
-    "existing_components": "Card, Drawer, Badge",
-    "conventions": "React + TypeScript"
-  },
-  "work_item_inputs": {
-    "frontend-code-1": {
-      "task_goal": "Build compare drawer",
-      "allowed_paths": ["src/pages/**", "src/components/**"]
-    }
-  }
-}
-```
+关键入参：`graph`、`project_context`，可选 `orchestrator_id`、`state`、`work_item_inputs`、`persist`、`load_if_exists`。
 
 ### `run_orchestrator_loop`
 
-执行一次 orchestrator loop tick：推进 DAG、自动提交 ready 的 Gemini work item，并返回更新后的编排状态。`project_context` 为必填，且 `design_system` / `existing_components` / `conventions` 至少一项为非空字符串。若本次调用带 `persist=true` 且配置了 SQLite，服务内的后台 runtime 会继续接管并在重启后自动恢复未终态 runs。
+执行一次 loop tick：推进 DAG，并按条件自动提交 ready 的 Gemini work items。
 
-```json
-{
-  "orchestrator_id": "version-compare-001",
-  "persist": true,
-  "load_if_exists": true,
-  "max_submissions": 1,
-  "graph": {
-    "schema_version": "1.0",
-    "work_items": [
-      {
-        "id": "backend-1",
-        "type": "backend",
-        "owner": "codex",
-        "scope": "Implement API",
-        "deps": [],
-        "status": "queued",
-        "input": {},
-        "acceptance": []
-      },
-      {
-        "id": "frontend-plan-1",
-        "type": "frontend-plan",
-        "owner": "gemini",
-        "scope": "Plan compare drawer",
-        "deps": [],
-        "status": "queued",
-        "input": {},
-        "acceptance": []
-      }
-    ]
-  },
-  "project_context": {
-    "design_system": "internal admin ui",
-    "existing_components": "Card, Drawer, Badge",
-    "conventions": "React + TypeScript"
-  }
-}
-```
+关键入参：`graph`、`project_context`，可选 `orchestrator_id`、`auto_submit_gemini`、`max_submissions`、`persist`、`load_if_exists`。
 
 ### `get_orchestrator_state`
 
-读取已持久化的 orchestrator graph/state/summary 快照。`orchestrator_id` 为必填。
+读取持久化 orchestrator 快照（graph/state/summary/runtime/context）。
 
-```json
-{
-  "orchestrator_id": "version-compare-001"
-}
-```
+关键入参：`orchestrator_id`。
 
 ### `get_orchestrator_summary`
 
-读取 orchestrator 的结构化最终汇总、失败补偿状态和 work item 事件轨迹（包含 `failure_diagnostics` 错误聚合）。若后台 runtime 已完成自动重试或进入 manual review，可直接用这个工具读取最终结果。
+读取结构化最终汇总与事件轨迹，适合复盘 run 结果与失败补偿状态。
 
-```json
-{
-  "orchestrator_id": "version-compare-001"
-}
-```
+关键入参：`orchestrator_id`。
 
 ### `get_runtime_diagnostics`
 
-读取当前进程的 Gemini runtime、process-control、task execution、orchestrator runtime 和持久化诊断信息，适合排查队列堆积、后台 run 活跃状态、取消回收结果和 SQLite 恢复情况；task execution 结果中包含失败错误类型聚合（failure diagnostics）。
+读取当前进程运行态诊断：Gemini runtime、任务队列、失败聚合、orchestrator runtime、process-control、持久化模式。
 
-```json
-{}
-```
+关键入参：空对象 `{}`。
 
 ### `get_orchestrator_resolution`
 
-读取主 agent 可消费的 orchestrator 决策包，包括 recommended actions、manual actions、已完成结果摘要和自然语言 summary。
+读取主 agent 可消费的决策包（recommended/manual actions、completed results、自然语言摘要）。
 
-```json
-{
-  "orchestrator_id": "version-compare-001"
-}
-```
+关键入参：`orchestrator_id`。
 
 ### `apply_orchestrator_resolution`
 
-应用 Codex 对 orchestrator run 的决策，支持 `provide-result`、`retry-work-item` 和 `mark-failed`，必要时会重新激活后台 runtime。
+写回 Codex 决策（`provide-result` / `retry-work-item` / `mark-failed`），必要时重新激活后台 runtime。
 
-```json
-{
-  "orchestrator_id": "version-compare-001",
-  "resolutions": [
-    {
-      "kind": "provide-result",
-      "work_item_id": "backend-1",
-      "result": { "ok": true }
-    }
-  ]
-}
-```
+关键入参：`orchestrator_id`、`resolutions`。
 
-## 会话复用（v2.2）
+## Session Reuse
 
-当前实现是“Gemini 原生会话优先，进程内回放兜底”：
-
-- 所有直接调用 Gemini CLI 的工具都接受可选 `session_id`
-- 第一次不传 `session_id` 时，服务会创建 Gemini 原生会话，并把该原生 `session_id` 透传回来
-- 后续带同一个 `session_id` 调用时，服务优先走 `gemini --resume <session_id>`
-- 如果原生恢复失败，但当前 MCP 进程里仍保留该会话的历史上下文，会自动退回到进程内回放模式
-- 返回结果会在 `structuredContent` 中携带：
+- 支持 `session_id` 的工具会在 `structuredContent` 中返回：
   - `session_id`
   - `session_reused`
+- 优先使用 Gemini 原生会话恢复；若恢复失败且进程内缓存存在，则退回到回放模式。
+- 若原生恢复失败且缓存不存在，会抛出会话错误并终止该次调用。
 
-### 行为边界
+## Runtime & Persistence
 
-- 若 Gemini CLI 自己还能识别该原生 `session_id`，会话可跨 MCP 进程重启继续使用
-- 若原生会话不可恢复，但当前进程里仍有缓存，仍可在本进程内继续
-- 若原生恢复失败且当前进程也没有缓存，会返回会话错误
-- 空闲过久的本地缓存会话会被自动清理
+- 默认持久化路径：`.gemini-mcp/state.sqlite`（可通过环境变量覆盖）
+- 若 `node:sqlite` 不可用，自动回退为内存模式（功能可用，但不跨进程持久化）
+- 服务重启后可恢复中断 task，并清理遗留队列消息
+- 可通过 `get_runtime_diagnostics` 查看当前是 `sqlite` 还是 `memory`
 
-### 会话调用示例
+## Environment Variables
 
-第一次调用：
+| 变量名 | 默认值 | 说明 |
+| --- | --- | --- |
+| `GEMINI_PATH` | 空 | 指定 Gemini CLI 可执行文件绝对路径 |
+| `GEMINI_MCP_DB_PATH` | `.gemini-mcp/state.sqlite` | SQLite 文件路径 |
+| `GEMINI_MCP_MAX_FRONTEND_TASKS` | `2` | `implement_frontend_task` 并发槽位 |
+| `GEMINI_MCP_MAX_ACTIVE_ORCHESTRATORS` | `2` | 后台并行 orchestrator run 上限 |
+| `GEMINI_MCP_ORCHESTRATOR_TICK_MS` | `1500` | orchestrator loop tick 周期（毫秒） |
+| `GEMINI_MCP_ORCHESTRATOR_MAX_GEMINI_RETRIES` | `2` | Gemini work item 自动重试上限 |
+| `GEMINI_MCP_PROCESS_TERMINATION_GRACE_MS` | `1500` | 子进程优雅终止等待时间（毫秒） |
+| `GEMINI_MCP_PROCESS_TERMINATION_FORCE_WAIT_MS` | `1000` | 强制终止后等待回收时间（毫秒） |
+| `GEMINI_MCP_LOG_LEVEL` | `info` | 日志级别：`info` / `warn` / `error` |
 
-```json
-{
-  "name": "generate_frontend_component",
-  "arguments": {
-    "component_name": "UserCard",
-    "framework": "react",
-    "description": "展示头像和姓名的卡片"
-  }
-}
-```
-
-返回值中的 `structuredContent` 示例：
-
-```json
-{
-  "session_id": "bd4ce5a8-00ff-40e0-bb01-8568a95e1733",
-  "session_reused": false
-}
-```
-
-第二次调用时复用：
-
-```json
-{
-  "name": "refactor_component",
-  "arguments": {
-    "code": "...第一次生成的组件代码...",
-    "issues": "改成 outlined 风格，并增强 loading 态",
-    "session_id": "bd4ce5a8-00ff-40e0-bb01-8568a95e1733"
-  }
-}
-```
-
-## 任务模式与超时建议
-
-当前任务模式分为两类：
-
-- `implement_frontend_task` 以 `taskSupport: required` 注册，必须通过 task-augmented 调用获取 `taskId`
-- `implement_frontend_task` 默认进入队列执行，并通过 `statusMessage` 暴露 `queued / prompting / generating / packaging / completed / failed` 阶段
-- `run_orchestrator_graph` 以 `taskSupport: optional` 注册，适合做显式单步编排推进；`load_if_exists=true` 时可自动查询已绑定 task 的状态/结果
-- `run_orchestrator_loop` 以 `taskSupport: optional` 注册，适合做显式单次 loop tick；当 `persist=true` 时，后台 runtime 会继续自动恢复并推进未终态 orchestrator runs
-- `get_orchestrator_state` 以 `taskSupport: optional` 注册，用于读取已持久化的 orchestrator 快照
-- `get_orchestrator_summary` 以 `taskSupport: optional` 注册，用于读取结构化最终汇总、失败补偿状态和 work item 事件轨迹
-- `get_runtime_diagnostics` 以 `taskSupport: optional` 注册，用于读取当前进程的 runtime metrics / diagnostics 总览与明细
-- `get_orchestrator_resolution` 以 `taskSupport: optional` 注册，用于读取主 agent 可消费的 resolution 决策包
-- `apply_orchestrator_resolution` 主 agent 结果回填与失败补偿工具 以 `taskSupport: optional` 注册，用于写回 Codex 决策并按需重新激活后台 runtime
-- `tasks/cancel` 会把任务置为 `cancelled`；当前实现会对 Gemini 子进程执行“两阶段终止”：先优雅停止、短暂等待，再在必要时强制回收；若仍失败，至少会阻止后续结果落盘
-- 除 `implement_frontend_task` 之外，其余 15 个工具仍以 `taskSupport: optional` 注册，可同步调用，也可走 task 模式
-- 对长耗时场景，优先建议使用 task 模式，避免单个同步请求长时间挂起
-
-如果调用方仍使用同步 `tools/call`，建议把 MCP 请求超时调高到至少 `240000ms`。当前一些复杂生成/重构请求仍可能超过 SDK 默认的 `60000ms`。
-
-可通过环境变量 `GEMINI_MCP_MAX_FRONTEND_TASKS` 调整 `implement_frontend_task` 的并发槽位，默认值为 `2`。`GEMINI_MCP_MAX_ACTIVE_ORCHESTRATORS` 可限制后台同时活跃的 orchestrator runs 数量，默认 `2`；`GEMINI_MCP_ORCHESTRATOR_TICK_MS` 可调整后台 loop tick 间隔，默认 `1500`；`GEMINI_MCP_ORCHESTRATOR_MAX_GEMINI_RETRIES` 可调整可重试前端节点的自动重试上限，默认 `2`；`GEMINI_MCP_PROCESS_TERMINATION_GRACE_MS` / `GEMINI_MCP_PROCESS_TERMINATION_FORCE_WAIT_MS` 可调整 Gemini 子进程两阶段终止的宽限期与强制回收等待时间。
-
-服务启动日志现在会额外输出 task execution diagnostics 和 orchestrator runtime diagnostics，便于观察 queued / running / cancel_requested / terminal 数量，以及后台 orchestrator 的恢复与活跃情况。
-
-### 首次调用前会做认证预检查吗？
-
-会，但现在是后台探测，不阻塞真实请求：
-
-- 若探测明确识别到未登录，会缓存未认证状态，后续请求可更快返回认证错误
-- 若探测超时或结果不确定，会进入一段时间的退避窗口，避免每次请求都额外卡住 `30s`
-- 任意一次真实 Gemini 调用成功后，会直接把当前 CLI 标记为已认证
-
-## 项目结构
-
-```
-src/
-├── index.ts                   # MCP 服务入口
-├── gemini-runner.ts           # Gemini CLI 运行时入口（组装路径发现、auth preflight、session/retry 与 process 执行）
-├── gemini-runner-discovery.ts # gemini CLI 路径发现（PATH/npm/pnpm/yarn/平台兜底）
-├── gemini-runner-errors.ts    # Gemini CLI 错误模型、错误归类与 JSON 输出提取
-├── gemini-runner-proxy.ts     # 代理环境解析（env + Windows 注册表 + macOS scutil + Linux gsettings）
-├── gemini-runner-session.ts   # session TTL、原生 resume 与回放上下文辅助
-├── gemini-runner-logging.ts   # runner 结构化日志级别与 sink 配置
-├── gemini-runner-auth.ts      # runner 认证探测缓存、预检查与 backoff 控制
-├── gemini-runner-process.ts   # runner CLI 子进程参数构造、执行与终止回收
-├── task-tool.ts               # task 模块入口（导出注册/提交与执行状态 helper）
-├── task-tool-types.ts         # task tool 公共类型与执行选项定义
-├── task-tool-lifecycle.ts     # task 执行生命周期与取消 watcher
-├── task-tool-registration.ts  # task tool 注册与 managed task 提交
-├── task-tool-scheduling.ts    # task 执行模式解析、排队与调度提交复用 helper
-├── process-control.ts         # v2.6 Gemini 子进程两阶段终止、强制回收与诊断统计
-├── task-execution.ts          # v2.5 执行槽位调度与阶段状态辅助
-├── context-builder.ts         # 项目上下文格式化器
-├── session-store.ts           # Gemini 会话存储抽象（内存 / 持久化共用）
-├── tool-result.ts             # 统一封装 session-aware 工具返回
-├── orchestrator-tools.ts      # v2.3 高层编排工具的结构化 JSON / 路径校验辅助
-├── orchestrator-contracts.ts  # v2.3 公共输入输出 schema / type contracts
-├── orchestrator-validator.ts  # v2.3 补丁消费校验 / 冲突检查辅助
-├── orchestrator-state.ts      # v2.6 主 agent 共享 WorkItem / DAG / task-session 状态模型
-├── orchestrator-runtime.ts    # v2.6 主 agent runtime 入口（组装 graph/loop 执行）
-├── orchestrator-runtime-schemas.ts # v2.6+ runtime 输入/输出 schema 与类型定义
-├── orchestrator-runtime-sync.ts # v2.6+ task/session/state 对齐与同步辅助
-├── orchestrator-runtime-actions.ts # v2.6+ next-action 与 summary 生成辅助
-├── orchestrator-runtime-persistence.ts # v2.6+ runtime 持久化状态与输出构建辅助
-├── orchestrator-runtime-manager.ts # v2.6 后台 orchestrator runtime manager 入口（调度/恢复/并发门控）
-├── orchestrator-runtime-manager-types.ts # runtime manager 公共类型与 options/diagnostics 定义
-├── orchestrator-runtime-manager-helpers.ts # runtime manager 状态与快照 helper
-├── orchestrator-runtime-manager-process.ts # runtime manager 单次 run 处理与失败补偿流程
-├── orchestrator-runtime-manager-events.ts # runtime manager 事件轨迹追加 helper
-├── orchestrator-runtime-manager-retry.ts # runtime manager 失败重试/人工审查策略 helper
-├── orchestrator-summary.ts    # v2.6 结构化最终汇总、自然语言摘要与事件轨迹 schema/helper
-├── runtime-diagnostics.ts     # v2.6 当前进程 runtime metrics / diagnostics 聚合与 schema
-├── orchestrator-resolution.ts # v2.6 主 agent 结果消费与失败补偿 resolution helper
-├── sqlite-persistence.ts      # v2.4/v2.6 SQLite 持久化入口（runtime 组装）
-├── sqlite-persistence-types.ts # SQLite 持久化公共类型与 store 接口
-├── sqlite-persistence-db.ts   # SQLite schema 初始化、恢复逻辑与通用 helper
-├── sqlite-task-store-helpers.ts # SQLite task store 查询/过期清理/状态迁移辅助
-├── sqlite-orchestrator-store-helpers.ts # SQLite orchestrator row 解析与恢复判定辅助
-├── sqlite-task-store.ts       # task store 持久化实现
-├── sqlite-task-message-queue.ts # task message queue 持久化实现
-├── sqlite-session-store.ts    # Gemini session store 持久化实现
-├── sqlite-orchestrator-store.ts # orchestrator snapshot store 持久化实现
-└── tools/
-    ├── generate-component.ts
-    ├── create-styles.ts
-    ├── review-ui.ts
-    ├── generate-html.ts
-    ├── refactor-component.ts
-    ├── generate-storybook.ts
-    ├── convert-framework.ts
-    ├── plan-frontend-solution.ts
-    ├── implement-frontend-task.ts
-    ├── run-orchestrator-graph.ts
-    ├── run-orchestrator-loop.ts
-    ├── get-runtime-diagnostics.ts
-    └── orchestrator-resolution.ts
-```
-
-## 开发
+## CLI
 
 ```bash
-npm run dev                # 开发模式（tsx，无需编译）
-npm run build              # 编译 TypeScript
-npm run format:check       # Prettier 检查
-npm run lint               # ESLint 检查
-npm run sync:readme-tools  # 基于 tool-manifest 自动刷新 README 工具区块
-npm run check:doc-sync     # 校验 README 生成区块与 manifest/工具章节一致
-npm run check:npm-package  # 校验 npm 包布局（bin/shebang/pack 文件清单）
-npm run check:v31-smoke    # v3.1 三场景安装冒烟（当前平台）
-npm run clean:test-tmp     # 清理 test-tmp 临时目录
-npm run pack:dry-run       # 本地模拟打包（不生成发布）
-npm run release:check      # 发布前一键检查（format + lint + typecheck + test + doc sync + npm package + v3.1 smoke）
-npm run typecheck          # 类型检查
-npm run test               # 构建 + Node 内建测试
+gemini-mcp --help
+gemini-mcp --version
+gemini-mcp --skip-gemini-check
 ```
 
-CI 会在 `ubuntu-latest` / `macos-latest` / `windows-latest` 执行 `npm run check:v31-smoke` 并上传 smoke 报告 artifact。
+## Development
 
-## 故障排查
+```bash
+npm run dev
+npm run build
+npm run typecheck
+npm run lint
+npm run test
+npm run sync:readme-tools
+npm run check:doc-sync
+npm run check:npm-package
+npm run check:v31-smoke
+npm run release:check
+```
 
-### MCP 下工具调用超时，但终端里直接执行 `gemini` 正常
+## CI
 
-有些 MCP 客户端在通过 `stdio` 启动服务时，只会继承一小部分环境变量。如果你的网络依赖代理，而 `HTTPS_PROXY` / `HTTP_PROXY` 没有透传给本服务，Gemini CLI 可能会一直卡住直到超时。
+GitHub Actions 会执行：
 
-当前版本会按以下顺序为 Gemini 子进程补代理配置：
+- quality：`format:check`、`lint`、`typecheck`、`test`、`check:doc-sync`、`check:npm-package`
+- v3.1 platform smoke：`ubuntu-latest` / `macos-latest` / `windows-latest` 三平台烟测
 
-1. 当前进程里的 `HTTPS_PROXY` / `HTTP_PROXY`
-2. 当前进程里的 `ALL_PROXY`（当 HTTP/HTTPS 未设置时）
-3. Windows 系统代理注册表（`HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`）
-4. macOS `scutil --proxy`
-5. Linux GNOME `gsettings`（`org.gnome.system.proxy`）
+## Troubleshooting
 
-若你的 Linux 环境不是 GNOME（或未配置 `gsettings`），建议显式把 `HTTPS_PROXY` 传给 MCP 服务进程。
+### Gemini CLI not found
 
-## 升级路线
+- 安装：`npm install -g @google/gemini-cli`
+- 完成认证：`gemini`
+- 或设置 `GEMINI_PATH` 指向可执行文件
 
-> 正式可追踪文档统一放在 `docs/plans/`，`.claude/plan` 仅作为本地工作目录（若存在）。
+### MCP 调用超时
 
-见 `docs/plans/upgrade-roadmap.md`
+- 对长耗时前端任务优先使用 task 模式
+- 提高调用方超时设置（建议 `>= 240000ms`）
+- 检查代理环境变量是否传递到 MCP 进程（`HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY`）
 
-## Codex 主Agent协同模式（v2.6 已落地）
+### 持久化没有生效
 
-当前仓库的目标方向已经调整为：
+- 使用 Node.js `>= 22.5`
+- 检查 `GEMINI_MCP_DB_PATH` 是否可写
+- 通过 `get_runtime_diagnostics` 查看 `persistence.mode`
 
-- Codex 作为唯一主 agent，负责需求理解、任务编排、后端方案/实现、结果汇总
-- Gemini 作为前端执行器，负责前端规划与前端编码子任务
-- 计划阶段由 Codex 输出后端方案，由 Gemini 输出前端方案，最终由 Codex 汇总形成统一计划
-- 编码阶段前端任务应优先走 MCP task 模式，以避免同步阻塞主流程
+## Contributing
 
-### 当前状态
+欢迎提交 issue / PR。涉及工具 schema、工具清单或 README 工具区块的修改，请同时执行：
 
-以下协同能力目前已经完成，并形成 v2.6 的主线闭环：
+```bash
+npm run build
+npm run sync:readme-tools
+npm run check:doc-sync
+```
 
-- Gemini 前端工具 MCP 化
-- 可选 task 模式
-- `session_id` 复用
-- `project_context` 注入
-- `plan_frontend_solution` 高层规划工具
-- `implement_frontend_task` 高层补丁工具（含 `allowed_paths` 校验）
-- `run_orchestrator_graph` 编排 runtime 工具（生成下一步 Codex / Gemini 动作）
-- `run_orchestrator_loop` 单次 loop tick 工具（自动提交 ready 的 Gemini work item）
-- `get_orchestrator_state` 持久化快照读取工具
-- `get_orchestrator_summary` 结构化最终汇总与事件轨迹读取工具
-- `get_runtime_diagnostics` 当前进程 runtime metrics / diagnostics / process-control 查询工具
-- `get_orchestrator_resolution` 主 agent 结果消费决策包读取工具
-- `apply_orchestrator_resolution` 主 agent 结果回填与失败补偿工具
-- 公共 `orchestrator-contracts` 可供主 agent 侧复用
-- `orchestrator-validator` 可用于落盘前 schema / 路径 / 冲突检查
-- SQLite task/message/session 持久化基础已接入（不可用时自动回退内存）
-- SQLite 基础恢复验证已补齐（task result / message queue / session reload）
-- 服务重启后会自动回收未完成 task，并标记为失败态
-- 已提供主 agent 可复用的 WorkItem / DAG / task-session 映射状态模型
-- 已支持 orchestrator SQLite 快照持久化与 `get_orchestrator_state` / `get_orchestrator_summary` 查询
-- `run_orchestrator_graph(load_if_exists=true)` 会自动查询已绑定 task 的状态/结果
-- 服务启动后会自动恢复未终态 orchestrator runs，并在后台继续推进独立 Gemini 分支
-- 后台 orchestrator runtime 已具备全局并发门控、`gemini` 节点自动重试与 manual-review 升级
-- 已新增结构化最终汇总、自然语言摘要和每个 work item 的事件轨迹
-- 已新增 `get_runtime_diagnostics`，可查询 process-control / task execution / orchestrator runtime / persistence 明细
-- 已新增 `get_orchestrator_resolution` / `apply_orchestrator_resolution`，用于主 agent 结果消费与失败补偿闭环
+## License
 
-下一阶段重点已经切换到：
-
-- npm 安装分发（Windows 优先，v3.0）
-- Linux / macOS 端到端验证与平台兜底（v3.1）
-
-### 设计文档
-
-详细方案见：
-
-- `docs/plans/2026-03-20-codex-gemini-orchestrator-design.md`
-- `docs/plans/2026-03-20-codex-gemini-orchestrator-implementation-plan.md`
-- `docs/plans/2026-03-20-codex-gemini-tool-schemas.md`
-- `docs/plans/upgrade-roadmap.md`
+当前仓库尚未声明开源许可证（`package.json` 未设置 `license` 字段，仓库根目录暂无 LICENSE 文件）。
